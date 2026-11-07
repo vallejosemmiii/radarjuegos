@@ -146,7 +146,6 @@
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         let catalogoGlobal = [];
 
-        // Logos oficiales con fallback de respaldo por seguridad
         function obtenerLogoTienda(nombreTienda) {
             const logos = {
                 'Steam': 'https://upload.wikimedia.org/wikipedia/commons/8/83/Steam_icon_logo.svg',
@@ -178,7 +177,7 @@
                     let mejorPrecio = 'Sin Stock';
                     if (precios.length > 0) {
                         precios.sort((a, b) => Number(a.price) - Number(b.price));
-                        mejorPrecio = `Desde $${Number(precios[0].price).toFixed(2)}`;
+                        mejorPrecio = `$${Number(precios[0].price).toFixed(2)}`;
                     }
 
                     return `
@@ -211,7 +210,13 @@
 
             document.getElementById('detail-title').innerText = game.title;
             document.getElementById('detail-platform').innerText = game.platform;
-            document.getElementById('detail-summary').innerText = game.summary || 'Sin descripción disponible.';
+            
+            // Forzamos la lectura del summary, con un texto por defecto si llegara a estar vacío en Supabase
+            const sinopsis = game.summary && game.summary.trim() !== "" 
+                ? game.summary 
+                : `Explora todo sobre ${game.title}, un título increíble lleno de acción, aventura y horas de entretenimiento asegurado. Compara los mejores precios entre Steam, Epic Games, Instant Gaming, Eneba y CDKeys para llevártelo al costo más bajo disponible.`;
+            
+            document.getElementById('detail-summary').innerText = sinopsis;
             document.getElementById('detail-img').src = game.cover_image;
             
             const btnTrailer = document.getElementById('detail-trailer');
