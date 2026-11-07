@@ -15,18 +15,24 @@ function obtenerLogoTienda(nombreTienda) {
     return logos[nombreTienda] || 'https://cdn-icons-png.flaticon.com/512/1170/1170679.png';
 }
 
-// Generador de SEO dinámico para Google
 export async function generateMetadata({ params }) {
-  const { data: game } = await supabase.from('games').select('title').eq('id', params.id).single();
+  const resolvedParams = await params;
+  const gameId = parseInt(resolvedParams.id, 10);
+  const { data: game } = await supabase.from('games').select('title').eq('id', gameId).single();
   return { title: game ? `${game.title} - Mejor Oferta` : 'Juego no encontrado' };
 }
 
 export const revalidate = 0;
 
 export default async function JuegoDetalle({ params }) {
-  const { data: game } = await supabase.from('games').select('*, game_prices(*)').eq('id', params.id).single();
+  // 1. Extraemos y convertimos el ID de la URL a un número matemático real
+  const resolvedParams = await params;
+  const gameId = parseInt(resolvedParams.id, 10);
+
+  // 2. Buscamos en Supabase utilizando el número formateado
+  const { data: game, error } = await supabase.from('games').select('*, game_prices(*)').eq('id', gameId).single();
   
-  if (!game) return <h2 style={{ textAlign: 'center', color: '#fff' }}>Juego no encontrado</h2>;
+  if (error || !game) return <h2 style={{ textAlign: 'center', color: '#fff', marginTop: '60px' }}>Juego no encontrado</h2>;
 
   const precios = game.game_prices || [];
   precios.sort((a, b) => Number(a.price) - Number(b.price));
