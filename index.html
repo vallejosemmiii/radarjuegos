@@ -3,48 +3,109 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Radar Juegos - Catálogo de Ofertas</title>
+    <title>Radar Juegos - Ofertas y Lanzamientos</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, sans-serif; }
         body { background-color: #0b0e14; color: #ffffff; padding: 20px; }
-        header { text-align: center; padding: 40px 0; border-bottom: 1px solid #1f293d; margin-bottom: 40px; }
-        header h1 { font-size: 2.5rem; color: #ffffff; }
+        header { text-align: center; padding: 40px 0; border-bottom: 1px solid #1f293d; margin-bottom: 30px; }
+        header h1 { font-size: 2.5rem; color: #ffffff; cursor: pointer; }
         header h1 span { color: #a855f7; }
         header p { color: #94a3b8; margin-top: 10px; font-size: 1.1rem; }
         .container { max-width: 1200px; margin: 0 auto; }
+        
+        /* Vista Catálogo (Grid) */
         .games-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 25px; }
-        .game-card { background: #16192b; border-radius: 12px; overflow: hidden; border: 1px solid #1f293d; display: flex; flex-direction: column; transition: transform 0.2s; }
-        .game-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(168, 85, 247, 0.2); }
+        .game-card { background: #16192b; border-radius: 12px; overflow: hidden; border: 1px solid #1f293d; display: flex; flex-direction: column; transition: transform 0.2s; cursor: pointer; }
+        .game-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(168, 85, 247, 0.2); border-color: #a855f7; }
         .game-card img { width: 100%; height: 160px; object-fit: cover; border-bottom: 1px solid #1f293d; }
         .game-info { padding: 20px; display: flex; flex-direction: column; flex-grow: 1; }
         .game-info h3 { font-size: 1.2rem; margin-bottom: 10px; color: #fff; }
         .platform { font-size: 0.85rem; color: #a855f7; font-weight: bold; margin-bottom: 10px; text-transform: uppercase; }
-        .summary { font-size: 0.85rem; color: #cbd5e1; margin-bottom: 15px; flex-grow: 1; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-        .price-box { display: flex; justify-content: space-between; align-items: center; padding-top: 15px; border-top: 1px solid #1f293d; }
+        .price-box { display: flex; justify-content: space-between; align-items: center; padding-top: 15px; border-top: 1px solid #1f293d; margin-top: auto; }
         .price { font-size: 1.2rem; font-weight: bold; color: #4ade80; }
-        .btn-ver { background: #a855f7; color: white; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-size: 0.9rem; font-weight: bold; transition: 0.2s; text-align: center; }
+        .btn-ver { background: #a855f7; color: white; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-size: 0.9rem; font-weight: bold; transition: 0.2s; text-align: center; border: none; cursor: pointer; }
         .btn-ver:hover { background: #9333ea; }
-        .loading { text-align: center; grid-column: 1 / -1; padding: 40px; color: #94a3b8; font-size: 1.2rem; }
+        
+        /* Vista Detalle (Oculta por defecto) */
+        #detail-view { display: none; animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .btn-back { background: transparent; color: #a855f7; border: 1px solid #a855f7; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 1rem; margin-bottom: 20px; transition: 0.2s; }
+        .btn-back:hover { background: #a855f7; color: #fff; }
+        .detail-container { background: #16192b; border: 1px solid #1f293d; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; gap: 20px; }
+        .detail-header { display: flex; gap: 30px; padding: 30px; border-bottom: 1px solid #1f293d; flex-wrap: wrap; }
+        .detail-header img { width: 100%; max-width: 400px; border-radius: 8px; object-fit: cover; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
+        .detail-text { flex: 1; min-width: 300px; display: flex; flex-direction: column; justify-content: center; }
+        .detail-text h2 { font-size: 2.5rem; margin-bottom: 10px; }
+        .detail-text .platform { font-size: 1rem; margin-bottom: 20px; }
+        .detail-text .summary { color: #cbd5e1; line-height: 1.6; margin-bottom: 25px; font-size: 1.05rem; }
+        .btn-trailer { background: #ef4444; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: bold; display: inline-block; width: fit-content; transition: 0.2s; }
+        .btn-trailer:hover { background: #dc2626; }
+        
+        /* Lista de Ofertas */
+        .detail-prices { padding: 30px; background: #0f121b; }
+        .detail-prices h3 { font-size: 1.5rem; margin-bottom: 20px; border-left: 4px solid #4ade80; padding-left: 10px; }
+        .store-list { display: flex; flex-direction: column; gap: 15px; }
+        .store-item { background: #16192b; border: 1px solid #1f293d; padding: 15px 25px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; transition: 0.2s; }
+        .store-item:hover { border-color: #4ade80; transform: translateX(5px); }
+        .store-name { font-size: 1.2rem; font-weight: bold; color: #fff; }
+        .store-price { font-size: 1.4rem; color: #4ade80; font-weight: bold; }
+        
+        .loading { text-align: center; padding: 40px; color: #94a3b8; font-size: 1.2rem; width: 100%; }
+        footer { text-align: center; padding: 40px 0; margin-top: 60px; border-top: 1px solid #1f293d; color: #64748b; font-size: 0.9rem; }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>Radar<span>Juegos</span>.lat</h1>
+            <h1 onclick="cerrarDetalle()">Radar<span>Juegos</span>.lat</h1>
             <p>El portal definitivo de ofertas y lanzamientos</p>
         </header>
+        
         <main>
-            <div id="games-grid" class="games-grid">
-                <div class="loading">Cargando base de datos con 40 títulos...</div>
+            <!-- VISTA 1: CATÁLOGO -->
+            <div id="main-view">
+                <div id="games-grid" class="games-grid">
+                    <div class="loading">Cargando base de datos...</div>
+                </div>
+            </div>
+
+            <!-- VISTA 2: DETALLE DEL JUEGO -->
+            <div id="detail-view">
+                <button class="btn-back" onclick="cerrarDetalle()">← Volver al catálogo</button>
+                <div class="detail-container">
+                    <div class="detail-header">
+                        <img id="detail-img" src="" alt="Portada del juego">
+                        <div class="detail-text">
+                            <h2 id="detail-title">Título del Juego</h2>
+                            <p class="platform" id="detail-platform">Plataforma</p>
+                            <p class="summary" id="detail-summary">Sinopsis del juego...</p>
+                            <a id="detail-trailer" href="#" target="_blank" class="btn-trailer">▶ Ver Tráiler</a>
+                        </div>
+                    </div>
+                    <div class="detail-prices">
+                        <h3>Opciones de Compra</h3>
+                        <div id="store-list-container" class="store-list">
+                            <!-- Las ofertas se cargarán aquí dinámicamente -->
+                        </div>
+                    </div>
+                </div>
             </div>
         </main>
+
+        <footer>
+            <p>&copy; 2026 radarjuegos.lat - Todos los derechos reservados.</p>
+        </footer>
     </div>
 
+    <!-- Librería de Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
         const SUPABASE_URL = 'https://iqndiyuhcjxrugzfyjaj.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlxbmRpeXVoY2p4cnVnemZ5amFqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQwNjUyNzMsImV4cCI6MjEwOTY0MTI3M30.h-z1IcDbwAKvgVP1jwrjW8p-cxoTzuduIvLltjLDgqM';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // Variable global para guardar los juegos sin volver a consultar la base de datos
+        let catalogoGlobal = [];
 
         async function cargarCatalogo() {
             const grid = document.getElementById('games-grid');
@@ -55,35 +116,33 @@
                     .order('id', { ascending: true });
 
                 if (error || !games.length) {
-                    grid.innerHTML = '<p class="loading">No se encontraron juegos en la base de datos.</p>';
+                    grid.innerHTML = '<p class="loading">Ocurrió un error o la base está vacía.</p>';
                     return;
                 }
+
+                catalogoGlobal = games; // Guardamos los datos para usarlos en el detalle
 
                 grid.innerHTML = games.map(game => {
                     const precios = game.game_prices || [];
                     let mejorPrecio = 'Sin Stock';
-                    let enlaceOferta = '#';
                     
                     if (precios.length > 0) {
-                        // El sistema busca en el array EXCLUSIVO de este juego y saca el más barato
                         precios.sort((a, b) => Number(a.price) - Number(b.price));
-                        mejorPrecio = `$${Number(precios[0].price).toFixed(2)}`;
-                        enlaceOferta = precios[0].affiliate_url; // Redirige exactamente al enlace de este juego
+                        mejorPrecio = `Desde $${Number(precios[0].price).toFixed(2)}`;
                     }
 
                     return `
-                        <div class="game-card">
+                        <div class="game-card" onclick="abrirDetalle(${game.id})">
                             <img src="${game.cover_image}" alt="${game.title}" onerror="this.src='https://via.placeholder.com/300x160/1e1b4b/ffffff?text=Radar+Juegos'">
                             <div class="game-info">
                                 <h3>${game.title}</h3>
                                 <p class="platform">${game.platform}</p>
-                                <p class="summary">${game.summary}</p>
                                 <div class="price-box">
                                     <div>
                                         <span style="font-size: 0.75rem; color: #94a3b8; display: block;">Mejor precio</span>
                                         <span class="price">${mejorPrecio}</span>
                                     </div>
-                                    <a href="${enlaceOferta}" target="_blank" class="btn-ver" ${enlaceOferta === '#' ? 'style="opacity:0.5; pointer-events:none;"' : ''}>Ver Oferta</a>
+                                    <button class="btn-ver">Ver Info</button>
                                 </div>
                             </div>
                         </div>
@@ -93,6 +152,60 @@
                 console.error(err);
             }
         }
+
+        function abrirDetalle(gameId) {
+            // Buscamos el juego en nuestra variable global
+            const game = catalogoGlobal.find(g => g.id === gameId);
+            if (!game) return;
+
+            // Llenamos los datos en la vista de detalle
+            document.getElementById('detail-title').innerText = game.title;
+            document.getElementById('detail-platform').innerText = game.platform;
+            document.getElementById('detail-summary').innerText = game.summary;
+            document.getElementById('detail-img').src = game.cover_image;
+            
+            // Configuramos el botón de tráiler
+            const btnTrailer = document.getElementById('detail-trailer');
+            if (game.trailer_url) {
+                btnTrailer.href = game.trailer_url;
+                btnTrailer.style.display = 'inline-block';
+            } else {
+                btnTrailer.style.display = 'none';
+            }
+
+            // Llenamos la lista de ofertas (ordenada de más barato a más caro)
+            const storeContainer = document.getElementById('store-list-container');
+            const precios = game.game_prices || [];
+            
+            if (precios.length > 0) {
+                precios.sort((a, b) => Number(a.price) - Number(b.price));
+                storeContainer.innerHTML = precios.map(p => `
+                    <div class="store-item">
+                        <span class="store-name">${p.store_name}</span>
+                        <div style="display:flex; align-items:center; gap:20px;">
+                            <span class="store-price">$${Number(p.price).toFixed(2)}</span>
+                            <a href="${p.affiliate_url}" target="_blank" class="btn-ver">Comprar aquí</a>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                storeContainer.innerHTML = '<p style="color:#94a3b8;">No hay ofertas disponibles en este momento.</p>';
+            }
+
+            // Ocultamos el catálogo y mostramos el detalle
+            document.getElementById('main-view').style.display = 'none';
+            document.getElementById('detail-view').style.display = 'block';
+            
+            // Subimos la pantalla arriba del todo
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function cerrarDetalle() {
+            // Ocultamos el detalle y volvemos al catálogo
+            document.getElementById('detail-view').style.display = 'none';
+            document.getElementById('main-view').style.display = 'block';
+        }
+
         document.addEventListener('DOMContentLoaded', cargarCatalogo);
     </script>
 </body>
