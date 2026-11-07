@@ -3,7 +3,7 @@ import Link from 'next/link';
 
 const supabase = createClient('https://iqndiyuhcjxrugzfyjaj.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlxbmRpeXVoY2p4cnVnemZ5amFqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQwNjUyNzMsImV4cCI6MjEwOTY0MTI3M30.h-z1IcDbwAKvgVP1jwrjW8p-cxoTzuduIvLltjLDgqM', { auth: { persistSession: false } });
 
-export const revalidate = 0; // Garantiza que los precios estén siempre actualizados
+export const revalidate = 0; 
 
 export default async function Catalogo() {
   const { data: games } = await supabase.from('games').select('*, game_prices(*)').order('id', { ascending: true });
@@ -20,7 +20,8 @@ export default async function Catalogo() {
         const anio = game.release_date ? game.release_date.split('-')[0] : 'TBA';
 
         return (
-          <Link href={`/juego/${game.id}`} key={game.id} style={{ textDecoration: 'none' }}>
+          // AQUÍ ESTÁ EL CAMBIO: Ahora usamos game.slug para generar la URL
+          <Link href={`/juego/${game.slug}`} key={game.id} style={{ textDecoration: 'none' }}>
             <div className="game-card">
               <img src={game.cover_image} alt={game.title} />
               <div className="game-info">
