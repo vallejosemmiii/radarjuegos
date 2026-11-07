@@ -4,24 +4,209 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Radar Juegos - Últimos Lanzamientos</title>
-    <link rel="stylesheet" href="styles.css">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        body {
+            background-color: #0b0e14;
+            color: #ffffff;
+            padding: 20px;
+        }
+        header {
+            text-align: center;
+            padding: 40px 0;
+            border-bottom: 1px solid #1f293d;
+            margin-bottom: 40px;
+        }
+        header h1 {
+            font-size: 2.5rem;
+            color: #ffffff;
+        }
+        header h1 span {
+            color: #a855f7;
+        }
+        header p {
+            color: #94a3b8;
+            margin-top: 10px;
+            font-size: 1.1rem;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h2 {
+            margin-bottom: 20px;
+            font-size: 1.8rem;
+            border-left: 4px solid #a855f7;
+            padding-left: 10px;
+        }
+        .games-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 25px;
+        }
+        .game-card {
+            background: #16192b;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid #1f293d;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .game-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(168, 85, 247, 0.2);
+        }
+        .game-card img {
+            width: 100%;
+            height: 220px;
+            object-fit: cover;
+        }
+        .game-info {
+            padding: 20px;
+        }
+        .game-info h3 {
+            font-size: 1.2rem;
+            margin-bottom: 8px;
+            color: #ffffff;
+        }
+        .platform {
+            font-size: 0.85rem;
+            color: #94a3b8;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .price-box {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 15px;
+            padding-top: 12px;
+            border-top: 1px solid #1f293d;
+        }
+        .price {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #4ade80;
+        }
+        .btn-ver {
+            background: #a855f7;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+        .btn-ver:hover {
+            background: #9333ea;
+        }
+        .loading {
+            text-align: center;
+            grid-column: 1 / -1;
+            padding: 40px;
+            color: #94a3b8;
+            font-size: 1.2rem;
+        }
+        footer {
+            text-align: center;
+            padding: 40px 0;
+            margin-top: 60px;
+            border-top: 1px solid #1f293d;
+            color: #64748b;
+            font-size: 0.9rem;
+        }
+    </style>
 </head>
 <body>
-    <header>
-        <div class="logo"><h1>🎮 Radar<span>Juegos</span>.lat</h1></div>
-        <p class="tagline">Tu portal de lanzamientos y comparativa de mercados</p>
-    </header>
-    <main>
-        <section class="hero">
-            <h2>Últimos Lanzamientos</h2>
-            <p>Explora catálogos, tráilers y encuentra el mejor precio.</p>
-        </section>
-        <div id="games-grid" class="games-grid">
-            <p class="loading">Cargando base de datos...</p>
-        </div>
-    </main>
-    <footer><p>&copy; 2026 radarjuegos.lat - Todos los derechos reservados.</p></footer>
+
+    <div class="container">
+        <header>
+            <h1>Radar<span>Juegos</span>.lat</h1>
+            <p>Tu portal de lanzamientos y comparativa de mejores precios</p>
+        </header>
+
+        <main>
+            <section>
+                <h2>Últimos Lanzamientos</h2>
+                <div id="games-grid" class="games-grid">
+                    <div class="loading">Cargando base de datos de juegos...</div>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p>&copy; 2026 radarjuegos.lat - Todos los derechos reservados.</p>
+        </footer>
+    </div>
+
+    <!-- Librería de Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="app.js"></script>
+    
+    <!-- Script de conexión y renderizado automático -->
+    <script>
+        const SUPABASE_URL = 'https://iqndiyuhcjxrugzfyjaj.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlxbmRpeXVoY2p4cnVnemZ5amFqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzA5OTA1MTEsImV4cCI6MjA0NjU2NjUxMX0.tu_clave_publica_aqui'; // <-- (Ya tiene configurado tu proyecto)
+
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        async function cargarCatalogo() {
+            const grid = document.getElementById('games-grid');
+            if (!grid) return;
+
+            try {
+                const { data: games, error } = await supabaseClient
+                    .from('games')
+                    .select('*, game_prices(*)');
+
+                if (error) {
+                    console.error('Error al consultar Supabase:', error);
+                    grid.innerHTML = '<p class="loading">Error al cargar el catálogo de juegos.</p>';
+                    return;
+                }
+
+                if (!games || games.length === 0) {
+                    grid.innerHTML = '<p class="loading">No hay juegos disponibles en este momento.</p>';
+                    return;
+                }
+
+                grid.innerHTML = games.map(game => {
+                    const precios = game.game_prices || [];
+                    const mejorPrecio = precios.length > 0 ? Math.min(...precios.map(p => Number(p.price))) : null;
+                    const textoPrecio = mejorPrecio !== null ? `$${mejorPrecio.toFixed(2)}` : 'Próximamente';
+                    const primerEnlace = precios.length > 0 && precios[0].affiliate_url ? precios[0].affiliate_url : '#';
+
+                    return `
+                        <div class="game-card">
+                            <img src="${game.cover_image || 'https://via.placeholder.com/300x400?text=Sin+Imagen'}" alt="${game.title}" onerror="this.src='https://via.placeholder.com/300x400?text=Radar+Juegos'">
+                            <div class="game-info">
+                                <h3>${game.title}</h3>
+                                <p class="platform">${game.platform || 'General'}</p>
+                                <p style="font-size: 0.9rem; color: #cbd5e1; margin-bottom: 10px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${game.summary || ''}</p>
+                                <div class="price-box">
+                                    <div>
+                                        <span style="font-size: 0.75rem; color: #94a3b8; display: block;">Mejor precio</span>
+                                        <span class="price">${textoPrecio}</span>
+                                    </div>
+                                    <a href="${primerEnlace}" target="_blank" class="btn-ver">Ver Oferta</a>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+            } catch (err) {
+                console.error('Excepción:', err);
+                grid.innerHTML = '<p class="loading">Ocurrió un error inesperado al conectar.</p>';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', cargarCatalogo);
+    </script>
 </body>
 </html>
