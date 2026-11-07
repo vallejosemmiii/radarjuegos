@@ -1,0 +1,127 @@
+// Configuración de Supabase
+const SUPABASE_URL = 'https://iqndiyuhcjxrugzfyjaj.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_MycSuo0qvqDsG8lJoRfEQg_kPYEwuNy';
+
+const { createClient } = supabase;
+const _supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+document.addEventListener('DOMContentLoaded', () => {
+    if (document.getElementById('games-grid')) {
+        cargarListaJuegos();
+    } else if (document.getElementById('game-detail-content')) {
+        cargarDetalleJuego();
+    }
+});
+
+async function cargarListaJuegos() {
+    const contenedor = document.getElementById('games-grid');
+    try {
+        const { data: games, error } = await _supabase
+            .from('games')
+            .select('*')
+            .order('release_date', { ascending: false });
+
+        if (error) throw error;
+
+        if (!games || games.length === 0) {
+            contenedor.innerHTML = `<p class="loading">No hay juegos cargados aún.</p>`;
+            return;
+        }
+
+        contenedor.innerHTML = '';
+        games.forEach(game => {
+            contenedor.innerHTML += `
+                <div class="game-card" onclick="window.location.href='detalle.html?id=${game.id}'">
+                    <img src="${game.cover_image || 'https://via.placeholder.com/300x160?text=Sin+Imagen'}" alt="${game.title}">
+                    <div class="game-info">
+                        <span class="platform-badge">${game.platform || 'General'}</span>
+                        <h3>${game.title}</h3>
+                        <p>${game.summary ? game.summary.substring(0, 90) + '...' : 'Haz clic para ver más info y precios.'}</p>
+                    </div>
+                </div>
+            `;
+        });
+    } catch (err) {
+        console.error(err);
+        contenedor.innerHTML = `<p class="loading">Error al cargar los datos.</p>`;
+    }
+}
+
+async function cargarDetalleJuego() {
+    const contenedor = document.getElementById('game-detail-content');
+    const params = new URLSearchParams(window.location.search);
+    const gameId = params.get('id');
+
+    if (!gameId) {
+        contenedor.innerHTML = `<p class="loading">Juego no encontrado.</p>`;
+        return;
+    }
+
+    try {
+        const { data: game, error } = await _supabase
+            .from('games')
+            .select('*')
+            .eq('id', gameId)
+            .single();
+
+        if (error || !game) throw error;
+
+        const { data: prices } = await _supabase
+            .from('game_prices')
+            .select('*')
+            .eq('game_id', gameId)
+            .order('price', { ascending: true });
+
+        let trailerEmbed = '';
+        if (game.trailer_url) {
+            let videoId = game.trailer_url;
+            if (game.trailer_url.includes('watch?v=')) {
+                videoId = game.trailer_url.split('watch?v=')[1].split('&')[0];
+            }
+            trailerEmbed = `<iframe width="100%" height="450" src="https://www.youtube.com/embed/${videoId}" frameborder="0" allowfullscreen></iframe>`;
+        } else {
+            trailerEmbed = `<p class="no-trailer">Tráiler no disponible temporalmente.</p>`;
+        }
+
+        let pricesHtml = '';
+        if (prices && prices.length > 0) {
+            prices.forEach(p => {
+                pricesHtml += `
+                    <tr>
+                        <td><strong>${p.store_name}</strong></td>
+                        <td class="price-tag">${p.currency} $${p.price}</td>
+                        <td><a href="${p.affiliate_url || '#'}" target="_blank" class="buy-btn">Ver oferta</a></td>
+                    </tr>
+                `;
+            });
+        } else {
+            pricesHtml = `<tr><td colspan="3" style="text-align:center;">No hay precios registrados en los mercados todavía.</td></tr>`;
+        }
+
+        contenedor.innerHTML = `
+            <div class="game-header-detail">
+                <img src="${game.cover_image}" alt="${game.title}" class="detail-cover">
+                <div class="detail-meta">
+                    <span class="platform-badge">${game.platform}</span>
+                    <h1>${game.title}</h1>
+                    <p class="release-date"><strong>Lanzamiento:</strong> ${game.release_date}</p>
+                    <p class="summary-text">${game.summary}</p>
+                </div>
+            </div>
+            <div class="section-block">
+                <h2>Tráiler Oficial</h2>
+                <div class="trailer-wrapper">${trailerEmbed}</div>
+            </div>
+            <div class="section-block">
+                <h2>Comparativa de Mercados y Precios</h2>
+                <table class="price-table">
+                    <thead><tr><th>Tienda</th><th>Precio</th><th>Acción</th></tr></thead>
+                    <tbody>${pricesHtml}</tbody>
+                </table>
+            </div>
+        `;
+    } catch (err) {
+        console.error(err);
+        contenedor.innerHTML = `<p class="loading">Error al cargar el detalle del juego.</p>`;
+    }
+}
