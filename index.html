@@ -15,7 +15,7 @@
         
         .container { max-width: 1200px; margin: 0 auto; }
         
-        /* ---------------- VISTA CATÁLOGO (GRID) ---------------- */
+        /* VISTA CATÁLOGO */
         .games-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 25px; }
         .game-card { 
             background: #16192b; 
@@ -27,49 +27,22 @@
             transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease; 
             cursor: pointer; 
         }
-        .game-card:hover { 
-            transform: translateY(-5px); 
-            box-shadow: 0 10px 20px rgba(168, 85, 247, 0.2); 
-            border-color: #a855f7; 
-        }
+        .game-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(168, 85, 247, 0.2); border-color: #a855f7; }
         .game-card img { width: 100%; height: 160px; object-fit: cover; border-bottom: 1px solid #1f293d; }
         .game-info { padding: 20px; display: flex; flex-direction: column; flex-grow: 1; }
         .game-info h3 { font-size: 1.2rem; margin-bottom: 10px; color: #fff; }
         .platform { font-size: 0.85rem; color: #a855f7; font-weight: bold; margin-bottom: 10px; text-transform: uppercase; }
-        
         .price-box { display: flex; justify-content: space-between; align-items: center; padding-top: 15px; border-top: 1px solid #1f293d; margin-top: auto; }
         .price { font-size: 1.2rem; font-weight: bold; color: #4ade80; }
         
-        .btn-ver { 
-            background: #a855f7; 
-            color: white; 
-            padding: 8px 16px; 
-            border-radius: 6px; 
-            text-decoration: none; 
-            font-size: 0.9rem; 
-            font-weight: bold; 
-            transition: background 0.2s; 
-            border: none; 
-            cursor: pointer; 
-        }
+        .btn-ver { background: #a855f7; color: white; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-size: 0.9rem; font-weight: bold; transition: background 0.2s; border: none; cursor: pointer; }
         .btn-ver:hover { background: #9333ea; }
         
-        /* ---------------- VISTA DETALLE DINÁMICA ---------------- */
+        /* VISTA DETALLE DINÁMICA */
         #detail-view { display: none; animation: fadeIn 0.3s ease-in-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         
-        .btn-back { 
-            background: transparent; 
-            color: #a855f7; 
-            border: 1px solid #a855f7; 
-            padding: 10px 20px; 
-            border-radius: 6px; 
-            cursor: pointer; 
-            font-size: 1rem; 
-            font-weight: bold;
-            margin-bottom: 25px; 
-            transition: all 0.2s; 
-        }
+        .btn-back { background: transparent; color: #a855f7; border: 1px solid #a855f7; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 1rem; font-weight: bold; margin-bottom: 25px; transition: all 0.2s; }
         .btn-back:hover { background: #a855f7; color: #fff; }
         
         .detail-container { background: #16192b; border: 1px solid #1f293d; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; }
@@ -78,26 +51,18 @@
         .detail-text { flex: 1; min-width: 300px; display: flex; flex-direction: column; justify-content: center; }
         .detail-text h2 { font-size: 2.5rem; margin-bottom: 10px; color: #fff; }
         .detail-text .platform { font-size: 1rem; margin-bottom: 20px; }
-        .detail-text .summary { color: #cbd5e1; line-height: 1.6; margin-bottom: 25px; font-size: 1.05rem; }
         
-        .btn-trailer { 
-            background: #ef4444; 
-            color: white; 
-            padding: 12px 24px; 
-            border-radius: 6px; 
-            text-decoration: none; 
-            font-weight: bold; 
-            display: inline-block; 
-            width: fit-content; 
-            transition: background 0.2s; 
-            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
-        }
+        /* DESCRIPCIÓN COMPLETA LIBRE DE CORTES */
+        .detail-text .summary { color: #cbd5e1; line-height: 1.6; margin-bottom: 25px; font-size: 1.05rem; display: block; overflow: visible; }
+        
+        .btn-trailer { background: #ef4444; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: bold; display: inline-block; width: fit-content; transition: background 0.2s; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3); }
         .btn-trailer:hover { background: #dc2626; }
         
-        /* Lista de Tiendas Comparativa */
+        /* LISTA DE TIENDAS Y LOGOS */
         .detail-prices { padding: 35px; background: #0f121b; }
         .detail-prices h3 { font-size: 1.5rem; margin-bottom: 20px; border-left: 4px solid #4ade80; padding-left: 12px; color: #fff; }
         .store-list { display: flex; flex-direction: column; gap: 15px; }
+        
         .store-item { 
             background: #16192b; 
             border: 1px solid #1f293d; 
@@ -109,7 +74,11 @@
             transition: border-color 0.2s, transform 0.2s; 
         }
         .store-item:hover { border-color: #4ade80; transform: translateX(4px); }
+        
+        .store-brand { display: flex; align-items: center; gap: 15px; }
+        .store-logo { width: 32px; height: 32px; border-radius: 50%; object-fit: contain; background: #fff; padding: 2px; }
         .store-name { font-size: 1.2rem; font-weight: bold; color: #fff; }
+        
         .store-price { font-size: 1.4rem; color: #4ade80; font-weight: bold; }
         
         .loading { text-align: center; padding: 60px; color: #94a3b8; font-size: 1.2rem; width: 100%; grid-column: 1 / -1; }
@@ -125,14 +94,12 @@
         </header>
 
         <main>
-            <!-- VISTA 1: CATÁLOGO PRINCIPAL -->
             <div id="main-view">
                 <div id="games-grid" class="games-grid">
                     <div class="loading">Cargando catálogo desde Supabase...</div>
                 </div>
             </div>
 
-            <!-- VISTA 2: PERFIL DE JUEGO & OFERTAS -->
             <div id="detail-view">
                 <button class="btn-back" onclick="cerrarDetalle()">← Volver al catálogo</button>
                 <div class="detail-container">
@@ -146,10 +113,8 @@
                         </div>
                     </div>
                     <div class="detail-prices">
-                        <h3>Tiendas y Comparativa de Precios</h3>
-                        <div id="store-list-container" class="store-list">
-                            <!-- Las tiendas se inyectarán aquí ordenadas por precio -->
-                        </div>
+                        <h3>Opciones de Compra y Tiendas</h3>
+                        <div id="store-list-container" class="store-list"></div>
                     </div>
                 </div>
             </div>
@@ -160,17 +125,25 @@
         </footer>
     </div>
 
-    <!-- SDK de Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
     <script>
         const SUPABASE_URL = 'https://iqndiyuhcjxrugzfyjaj.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlxbmRpeXVoY2p4cnVnemZ5amFqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQwNjUyNzMsImV4cCI6MjEwOTY0MTI3M30.h-z1IcDbwAKvgVP1jwrjW8p-cxoTzuduIvLltjLDgqM';
 
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-        // Memoria local para mantener la velocidad fluida
         let catalogoGlobal = [];
+
+        // Logos oficiales para cada tienda (incluyendo Epic Games)
+        function obtenerLogoTienda(nombreTienda) {
+            const logos = {
+                'Steam': 'https://upload.wikimedia.org/wikipedia/commons/c/c1/Steam_Logo.png',
+                'Instant Gaming': 'https://www.instant-gaming.com/themes/ig-light/images/ig-logo-round.svg',
+                'Epic Games': 'https://upload.wikimedia.org/wikipedia/commons/3/31/Epic_Games_logo.svg',
+                'Eneba': 'https://play-lh.googleusercontent.com/1G6V7fH5K_hL5P5OqJ4cT1gI3hJqE9v0JbYF8q8lDq2P8z2E7X8zQ2X2y2h2n2v2G2o=w240-h240-rw',
+                'CDKeys': 'https://pbs.twimg.com/profile_images/1691458997382213632/X128O9eZ_400x400.jpg'
+            };
+            return logos[nombreTienda] || 'https://cdn-icons-png.flaticon.com/512/1170/1170679.png';
+        }
 
         async function cargarCatalogo() {
             const grid = document.getElementById('games-grid');
@@ -181,16 +154,15 @@
                     .order('id', { ascending: true });
 
                 if (error || !games.length) {
-                    grid.innerHTML = '<p class="loading">No se pudieron cargar los juegos de la base de datos.</p>';
+                    grid.innerHTML = '<p class="loading">No se pudieron cargar los juegos.</p>';
                     return;
                 }
 
-                catalogoGlobal = games; // Guardamos en memoria global
+                catalogoGlobal = games;
 
                 grid.innerHTML = games.map(game => {
                     const precios = game.game_prices || [];
                     let mejorPrecio = 'Sin Stock';
-                    
                     if (precios.length > 0) {
                         precios.sort((a, b) => Number(a.price) - Number(b.price));
                         mejorPrecio = `Desde $${Number(precios[0].price).toFixed(2)}`;
@@ -198,7 +170,7 @@
 
                     return `
                         <div class="game-card" onclick="abrirDetalle(${game.id})">
-                            <img src="${game.cover_image}" alt="${game.title}" onerror="this.src='https://via.placeholder.com/300x160/1e1b4b/ffffff?text=Radar+Juegos'">
+                            <img src="${game.cover_image}" alt="${game.title}">
                             <div class="game-info">
                                 <h3>${game.title}</h3>
                                 <p class="platform">${game.platform}</p>
@@ -216,7 +188,7 @@
 
             } catch (err) {
                 console.error('Error:', err);
-                grid.innerHTML = '<p class="loading">Ocurrió un error inesperado al conectar.</p>';
+                grid.innerHTML = '<p class="loading">Ocurrió un error de conexión.</p>';
             }
         }
 
@@ -224,13 +196,11 @@
             const game = catalogoGlobal.find(g => g.id === gameId);
             if (!game) return;
 
-            // Inyectar datos en la vista de perfil
             document.getElementById('detail-title').innerText = game.title;
             document.getElementById('detail-platform').innerText = game.platform;
             document.getElementById('detail-summary').innerText = game.summary || 'Sin descripción disponible.';
             document.getElementById('detail-img').src = game.cover_image;
             
-            // Enlace al Tráiler
             const btnTrailer = document.getElementById('detail-trailer');
             if (game.trailer_url) {
                 btnTrailer.href = game.trailer_url;
@@ -239,17 +209,18 @@
                 btnTrailer.style.display = 'none';
             }
 
-            // Inyectar la comparativa de tiendas
             const storeContainer = document.getElementById('store-list-container');
             const precios = game.game_prices || [];
             
             if (precios.length > 0) {
-                // Ordenar del más barato al más caro
                 precios.sort((a, b) => Number(a.price) - Number(b.price));
                 
                 storeContainer.innerHTML = precios.map(p => `
                     <div class="store-item">
-                        <span class="store-name">${p.store_name}</span>
+                        <div class="store-brand">
+                            <img src="${obtenerLogoTienda(p.store_name)}" class="store-logo" alt="${p.store_name} logo">
+                            <span class="store-name">${p.store_name}</span>
+                        </div>
                         <div style="display:flex; align-items:center; gap:20px;">
                             <span class="store-price">$${Number(p.price).toFixed(2)}</span>
                             <a href="${p.affiliate_url}" target="_blank" class="btn-ver">Ir a la Oferta ↗</a>
@@ -260,11 +231,8 @@
                 storeContainer.innerHTML = '<p style="color:#94a3b8;">No hay precios ni tiendas asociadas para este juego.</p>';
             }
 
-            // Cambiar vista
             document.getElementById('main-view').style.display = 'none';
             document.getElementById('detail-view').style.display = 'block';
-            
-            // Hacer scroll suave hacia arriba
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
