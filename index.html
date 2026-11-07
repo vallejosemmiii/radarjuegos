@@ -28,14 +28,14 @@
             cursor: pointer; 
         }
         .game-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(168, 85, 247, 0.2); border-color: #a855f7; }
-        .game-card img { width: 100%; height: 160px; object-fit: cover; border-bottom: 1px solid #1f293d; }
+        .game-card img { width: 100%; height: 160px; object-fit: cover; border-bottom: 1px solid #1f293d; background: #111422; }
         .game-info { padding: 20px; display: flex; flex-direction: column; flex-grow: 1; }
         .game-info h3 { font-size: 1.2rem; margin-bottom: 10px; color: #fff; }
         .platform { font-size: 0.85rem; color: #a855f7; font-weight: bold; margin-bottom: 10px; text-transform: uppercase; }
         .price-box { display: flex; justify-content: space-between; align-items: center; padding-top: 15px; border-top: 1px solid #1f293d; margin-top: auto; }
         .price { font-size: 1.2rem; font-weight: bold; color: #4ade80; }
         
-        .btn-ver { background: #a855f7; color: white; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-size: 0.9rem; font-weight: bold; transition: background 0.2s; border: none; cursor: pointer; }
+        .btn-ver { background: #a855f7; color: white; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-size: 0.9rem; font-weight: bold; transition: background 0.2s; border: none; cursor: pointer; display: inline-block; text-align: center; }
         .btn-ver:hover { background: #9333ea; }
         
         /* VISTA DETALLE DINÁMICA */
@@ -47,13 +47,24 @@
         
         .detail-container { background: #16192b; border: 1px solid #1f293d; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; }
         .detail-header { display: flex; gap: 30px; padding: 35px; border-bottom: 1px solid #1f293d; flex-wrap: wrap; background: #111422; }
-        .detail-header img { width: 100%; max-width: 420px; border-radius: 8px; object-fit: cover; box-shadow: 0 5px 20px rgba(0,0,0,0.6); border: 1px solid #1f293d; }
-        .detail-text { flex: 1; min-width: 300px; display: flex; flex-direction: column; justify-content: center; }
+        .detail-header img { width: 100%; max-width: 420px; height: auto; border-radius: 8px; object-fit: cover; box-shadow: 0 5px 20px rgba(0,0,0,0.6); border: 1px solid #1f293d; background: #0b0e14; }
+        .detail-text { flex: 1; min-width: 300px; display: flex; flex-direction: column; justify-content: flex-start; }
         .detail-text h2 { font-size: 2.5rem; margin-bottom: 10px; color: #fff; }
         .detail-text .platform { font-size: 1rem; margin-bottom: 20px; }
         
-        /* DESCRIPCIÓN COMPLETA LIBRE DE CORTES */
-        .detail-text .summary { color: #cbd5e1; line-height: 1.6; margin-bottom: 25px; font-size: 1.05rem; display: block; overflow: visible; }
+        /* CAJA DE SINOPSIS CON SCROLL INTERNO Y LECTURA CÓMODA */
+        .summary-box { 
+            background: #0b0e14; 
+            border: 1px solid #1f293d; 
+            padding: 20px; 
+            border-radius: 8px; 
+            margin-bottom: 25px; 
+            max-height: 220px; 
+            overflow-y: auto; 
+        }
+        .summary-box::-webkit-scrollbar { width: 6px; }
+        .summary-box::-webkit-scrollbar-thumb { background: #a855f7; border-radius: 3px; }
+        .summary-text { color: #cbd5e1; line-height: 1.6; font-size: 1.05rem; }
         
         .btn-trailer { background: #ef4444; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: bold; display: inline-block; width: fit-content; transition: background 0.2s; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3); }
         .btn-trailer:hover { background: #dc2626; }
@@ -76,7 +87,7 @@
         .store-item:hover { border-color: #4ade80; transform: translateX(4px); }
         
         .store-brand { display: flex; align-items: center; gap: 15px; }
-        .store-logo { width: 32px; height: 32px; border-radius: 50%; object-fit: contain; background: #fff; padding: 2px; }
+        .store-logo { width: 36px; height: 36px; border-radius: 8px; object-fit: contain; background: #1f293d; padding: 4px; border: 1px solid #2d3748; }
         .store-name { font-size: 1.2rem; font-weight: bold; color: #fff; }
         
         .store-price { font-size: 1.4rem; color: #4ade80; font-weight: bold; }
@@ -108,7 +119,9 @@
                         <div class="detail-text">
                             <h2 id="detail-title">Título del Juego</h2>
                             <p class="platform" id="detail-platform">Plataforma</p>
-                            <p class="summary" id="detail-summary">Cargando sinopsis del juego...</p>
+                            <div class="summary-box">
+                                <p class="summary-text" id="detail-summary">Cargando sinopsis del juego...</p>
+                            </div>
                             <a id="detail-trailer" href="#" target="_blank" class="btn-trailer">▶ Ver Tráiler Oficial</a>
                         </div>
                     </div>
@@ -133,14 +146,14 @@
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         let catalogoGlobal = [];
 
-        // Logos oficiales para cada tienda (incluyendo Epic Games)
+        // Logos oficiales con fallback de respaldo por seguridad
         function obtenerLogoTienda(nombreTienda) {
             const logos = {
-                'Steam': 'https://upload.wikimedia.org/wikipedia/commons/c/c1/Steam_Logo.png',
+                'Steam': 'https://upload.wikimedia.org/wikipedia/commons/8/83/Steam_icon_logo.svg',
                 'Instant Gaming': 'https://www.instant-gaming.com/themes/ig-light/images/ig-logo-round.svg',
                 'Epic Games': 'https://upload.wikimedia.org/wikipedia/commons/3/31/Epic_Games_logo.svg',
-                'Eneba': 'https://play-lh.googleusercontent.com/1G6V7fH5K_hL5P5OqJ4cT1gI3hJqE9v0JbYF8q8lDq2P8z2E7X8zQ2X2y2h2n2v2G2o=w240-h240-rw',
-                'CDKeys': 'https://pbs.twimg.com/profile_images/1691458997382213632/X128O9eZ_400x400.jpg'
+                'Eneba': 'https://www.eneba.com/favicon.ico',
+                'CDKeys': 'https://www.cdkeys.com/media/favicon/default/cdkeys-favicon.png'
             };
             return logos[nombreTienda] || 'https://cdn-icons-png.flaticon.com/512/1170/1170679.png';
         }
@@ -170,7 +183,7 @@
 
                     return `
                         <div class="game-card" onclick="abrirDetalle(${game.id})">
-                            <img src="${game.cover_image}" alt="${game.title}">
+                            <img src="${game.cover_image}" alt="${game.title}" onerror="this.src='https://via.placeholder.com/300x160/1e1b4b/ffffff?text=Radar+Juegos'">
                             <div class="game-info">
                                 <h3>${game.title}</h3>
                                 <p class="platform">${game.platform}</p>
@@ -218,7 +231,7 @@
                 storeContainer.innerHTML = precios.map(p => `
                     <div class="store-item">
                         <div class="store-brand">
-                            <img src="${obtenerLogoTienda(p.store_name)}" class="store-logo" alt="${p.store_name} logo">
+                            <img src="${obtenerLogoTienda(p.store_name)}" class="store-logo" alt="${p.store_name}" onerror="this.src='https://cdn-icons-png.flaticon.com/512/1170/1170679.png'">
                             <span class="store-name">${p.store_name}</span>
                         </div>
                         <div style="display:flex; align-items:center; gap:20px;">
