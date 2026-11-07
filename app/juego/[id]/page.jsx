@@ -17,20 +17,19 @@ function obtenerLogoTienda(nombreTienda) {
 
 export async function generateMetadata({ params }) {
   const resolvedParams = await params;
-  const gameId = parseInt(resolvedParams.id, 10);
-  const { data: game } = await supabase.from('games').select('title').eq('id', gameId).single();
+  const gameSlug = resolvedParams.id; // Ahora lo leemos como texto (slug)
+  const { data: game } = await supabase.from('games').select('title').eq('slug', gameSlug).single();
   return { title: game ? `${game.title} - Mejor Oferta` : 'Juego no encontrado' };
 }
 
 export const revalidate = 0;
 
 export default async function JuegoDetalle({ params }) {
-  // 1. Extraemos y convertimos el ID de la URL a un número matemático real
   const resolvedParams = await params;
-  const gameId = parseInt(resolvedParams.id, 10);
+  const gameSlug = resolvedParams.id; // Ahora lo leemos como texto (slug)
 
-  // 2. Buscamos en Supabase utilizando el número formateado
-  const { data: game, error } = await supabase.from('games').select('*, game_prices(*)').eq('id', gameId).single();
+  // Buscamos en la columna 'slug' de Supabase en lugar de 'id'
+  const { data: game, error } = await supabase.from('games').select('*, game_prices(*)').eq('slug', gameSlug).single();
   
   if (error || !game) return <h2 style={{ textAlign: 'center', color: '#fff', marginTop: '60px' }}>Juego no encontrado</h2>;
 
