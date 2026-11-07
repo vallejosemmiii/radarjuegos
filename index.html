@@ -54,10 +54,10 @@
             border-radius: 12px;
             overflow: hidden;
             border: 1px solid #1f293d;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
         .game-card:hover {
             transform: translateY(-5px);
@@ -66,17 +66,17 @@
         .game-banner {
             width: 100%;
             height: 140px;
-            background: linear-gradient(135deg, #2b1055, #7597de);
+            background: linear-gradient(135deg, #1e1b4b, #3b0764);
             display: flex;
             align-items: center;
             justify-content: center;
             padding: 15px;
             text-align: center;
+            border-bottom: 1px solid #1f293d;
         }
         .game-banner h3 {
             font-size: 1.25rem;
             color: #ffffff;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
         }
         .game-info {
             padding: 20px;
@@ -87,7 +87,6 @@
             font-weight: bold;
             margin-bottom: 10px;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
         }
         .summary {
             font-size: 0.85rem;
@@ -152,7 +151,7 @@
             <section>
                 <h2>Últimos Lanzamientos</h2>
                 <div id="games-grid" class="games-grid">
-                    <div class="loading">Cargando catálogo de Supabase...</div>
+                    <div class="loading">Cargando catálogo...</div>
                 </div>
             </section>
         </main>
@@ -176,6 +175,7 @@
             if (!grid) return;
 
             try {
+                // Consultamos los juegos y sus precios enlazados correctamente
                 const { data: games, error } = await supabaseClient
                     .from('games')
                     .select('*, game_prices(*)');
@@ -193,9 +193,17 @@
 
                 grid.innerHTML = games.map(game => {
                     const precios = game.game_prices || [];
-                    const mejorPrecio = precios.length > 0 ? Math.min(...precios.map(p => Number(p.price))) : null;
-                    const textoPrecio = mejorPrecio !== null ? `$${mejorPrecio.toFixed(2)}` : 'Próximamente';
-                    const primerEnlace = precios.length > 0 && precios[0].affiliate_url ? precios[0].affiliate_url : '#';
+                    
+                    // Buscamos estrictamente el precio menor de ESTE juego específico
+                    let mejorPrecio = 'Próximamente';
+                    let enlaceOferta = '#';
+
+                    if (precios.length > 0) {
+                        // Ordenamos los precios de este juego de menor a mayor
+                        precios.sort((a, b) => Number(a.price) - Number(b.price));
+                        mejorPrecio = `$${Number(precios[0].price).toFixed(2)}`;
+                        enlaceOferta = precios[0].affiliate_url || '#';
+                    }
 
                     return `
                         <div class="game-card">
@@ -208,10 +216,10 @@
                                 <div class="price-box">
                                     <div>
                                         <span style="font-size: 0.75rem; color: #94a3b8; display: block;">Mejor precio</span>
-                                        <span class="price">${textoPrecio}</span>
+                                        <span class="price">${mejorPrecio}</span>
                                     </div>
-                                    <a href="${primerEnlace}" target="_blank" class="btn-ver">Ver Oferta</a>
-                                gamer</div>
+                                    <a href="${enlaceOferta}" target="_blank" class="btn-ver" ${enlaceOferta === '#' ? 'style="opacity:0.5; pointer-events:none;"' : ''}>Ver Oferta</a>
+                                </div>
                             </div>
                         </div>
                     `;
