@@ -1,0 +1,56 @@
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+body { background-color: #0b0e14; color: #ffffff; padding: 20px; }
+.container { max-width: 1200px; margin: 0 auto; }
+
+header { text-align: center; padding: 40px 0; border-bottom: 1px solid #1f293d; margin-bottom: 30px; }
+header h1 { font-size: 2.5rem; color: #ffffff; cursor: pointer; user-select: none; }
+header h1 span { color: #a855f7; }
+header p { color: #94a3b8; margin-top: 10px; font-size: 1.1rem; }
+
+.games-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 25px; }
+.game-card { background: #16192b; border-radius: 12px; overflow: hidden; border: 1px solid #1f293d; display: flex; flex-direction: column; transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease; cursor: pointer; }
+.game-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(168, 85, 247, 0.2); border-color: #a855f7; }
+.game-card img { width: 100%; height: 160px; object-fit: cover; border-bottom: 1px solid #1f293d; background: #111422; }
+
+.game-info { padding: 20px; display: flex; flex-direction: column; flex-grow: 1; }
+.game-info h3 { font-size: 1.2rem; margin-bottom: 10px; color: #fff; }
+.platform { font-size: 0.85rem; color: #a855f7; font-weight: bold; margin-bottom: 5px; text-transform: uppercase; }
+.release-year { font-size: 0.85rem; color: #94a3b8; margin-bottom: 15px; }
+
+.price-box { display: flex; justify-content: space-between; align-items: center; padding-top: 15px; border-top: 1px solid #1f293d; margin-top: auto; }
+.price { font-size: 1.2rem; font-weight: bold; color: #4ade80; }
+
+.btn-ver { background: #a855f7; color: white; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-size: 0.9rem; font-weight: bold; transition: background 0.2s; border: none; cursor: pointer; display: inline-block; text-align: center; }
+.btn-ver:hover { background: #9333ea; }
+
+.btn-back { background: transparent; color: #a855f7; border: 1px solid #a855f7; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 1rem; font-weight: bold; margin-bottom: 25px; transition: all 0.2s; text-decoration: none; display: inline-block; }
+.btn-back:hover { background: #a855f7; color: #fff; }
+
+.detail-container { background: #16192b; border: 1px solid #1f293d; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; }
+.detail-header { display: flex; gap: 30px; padding: 35px; border-bottom: 1px solid #1f293d; flex-wrap: wrap; background: #111422; }
+.detail-header img { width: 100%; max-width: 420px; height: auto; border-radius: 8px; object-fit: cover; box-shadow: 0 5px 20px rgba(0,0,0,0.6); border: 1px solid #1f293d; background: #0b0e14; }
+.detail-text { flex: 1; min-width: 300px; display: flex; flex-direction: column; justify-content: flex-start; }
+.detail-text h2 { font-size: 2.5rem; margin-bottom: 5px; color: #fff; }
+.detail-text .platform { font-size: 1.1rem; margin-bottom: 5px; color: #a855f7; font-weight: bold; }
+.detail-text .release-date { font-size: 1rem; color: #94a3b8; margin-bottom: 20px; }
+.detail-text .release-date span { color: #fff; }
+
+.summary-box { background: #0b0e14; border: 1px solid #1f293d; padding: 20px; border-radius: 8px; margin-bottom: 25px; max-height: 220px; overflow-y: auto; }
+.summary-box::-webkit-scrollbar { width: 6px; }
+.summary-box::-webkit-scrollbar-thumb { background: #a855f7; border-radius: 3px; }
+.summary-text { color: #cbd5e1; line-height: 1.6; font-size: 1.05rem; }
+
+.btn-trailer { background: #ef4444; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: bold; display: inline-block; width: fit-content; transition: background 0.2s; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3); }
+.btn-trailer:hover { background: #dc2626; }
+
+.detail-prices { padding: 35px; background: #0f121b; }
+.detail-prices h3 { font-size: 1.5rem; margin-bottom: 20px; border-left: 4px solid #4ade80; padding-left: 12px; color: #fff; }
+.store-list { display: flex; flex-direction: column; gap: 15px; }
+.store-item { background: #16192b; border: 1px solid #1f293d; padding: 18px 25px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; transition: border-color 0.2s, transform 0.2s; }
+.store-item:hover { border-color: #4ade80; transform: translateX(4px); }
+.store-brand { display: flex; align-items: center; gap: 15px; }
+.store-logo { width: 36px; height: 36px; border-radius: 8px; object-fit: contain; background: #1f293d; padding: 4px; border: 1px solid #2d3748; }
+.store-name { font-size: 1.2rem; font-weight: bold; color: #fff; }
+.store-price { font-size: 1.4rem; color: #4ade80; font-weight: bold; }
+
+footer { text-align: center; padding: 40px 0; margin-top: 60px; border-top: 1px solid #1f293d; color: #64748b; font-size: 0.9rem; }
