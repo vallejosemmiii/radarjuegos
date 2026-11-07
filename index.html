@@ -52,7 +52,7 @@
         .detail-text h2 { font-size: 2.5rem; margin-bottom: 10px; color: #fff; }
         .detail-text .platform { font-size: 1rem; margin-bottom: 20px; }
         
-        /* CAJA DE SINOPSIS CON SCROLL INTERNO Y LECTURA CÓMODA */
+        /* CAJA DE SINOPSIS CON SCROLL INTERNO */
         .summary-box { 
             background: #0b0e14; 
             border: 1px solid #1f293d; 
@@ -146,6 +146,18 @@
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         let catalogoGlobal = [];
 
+        // Enlaces directos a los tráilers oficiales de YouTube de los principales juegos
+        const trailersOficiales = {
+            1: "https://www.youtube.com/watch?v=QkkoHAzjnUs", // GTA V
+            2: "https://www.youtube.com/watch?v=XxxboW_VC8g", // Witcher 3
+            3: "https://www.youtube.com/watch?v=8X2kifS6fb8", // Cyberpunk 2077
+            4: "https://www.youtube.com/watch?v=gmA6MrX81z4", // RDR 2
+            5: "https://www.youtube.com/watch?v=AKX3KuTCVSI", // Elden Ring
+            6: "https://www.youtube.com/watch?v=CpjVbsk_aWY", // Baldur's Gate 3
+            7: "https://www.youtube.com/watch?v=BzyhUWJA51Y", // Hogwarts Legacy
+            8: "https://www.youtube.com/watch?v=j5W5HXlVbzI"  // Resident Evil 4
+        };
+
         function obtenerLogoTienda(nombreTienda) {
             const logos = {
                 'Steam': 'https://upload.wikimedia.org/wikipedia/commons/8/83/Steam_icon_logo.svg',
@@ -211,21 +223,19 @@
             document.getElementById('detail-title').innerText = game.title;
             document.getElementById('detail-platform').innerText = game.platform;
             
-            // Forzamos la lectura del summary, con un texto por defecto si llegara a estar vacío en Supabase
-            const sinopsis = game.summary && game.summary.trim() !== "" 
+            // Asignación segura de la sinopsis utilizando textContent para garantizar que aparezca el texto completo
+            const sinopsisTexto = game.summary && game.summary.trim() !== "" 
                 ? game.summary 
                 : `Explora todo sobre ${game.title}, un título increíble lleno de acción, aventura y horas de entretenimiento asegurado. Compara los mejores precios entre Steam, Epic Games, Instant Gaming, Eneba y CDKeys para llevártelo al costo más bajo disponible.`;
             
-            document.getElementById('detail-summary').innerText = sinopsis;
+            document.getElementById('detail-summary').textContent = sinopsisTexto;
             document.getElementById('detail-img').src = game.cover_image;
             
+            // Asignar el enlace directo al tráiler oficial (con respaldo a búsqueda en YouTube si no estuviera mapeado)
             const btnTrailer = document.getElementById('detail-trailer');
-            if (game.trailer_url) {
-                btnTrailer.href = game.trailer_url;
-                btnTrailer.style.display = 'inline-block';
-            } else {
-                btnTrailer.style.display = 'none';
-            }
+            const linkDirecto = trailersOficiales[game.id] || game.trailer_url || `https://www.youtube.com/results?search_query=${encodeURIComponent(game.title + ' official trailer')}`;
+            btnTrailer.href = linkDirecto;
+            btnTrailer.style.display = 'inline-block';
 
             const storeContainer = document.getElementById('store-list-container');
             const precios = game.game_prices || [];
