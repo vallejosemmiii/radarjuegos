@@ -5,10 +5,18 @@ import { createClient } from '@supabase/supabase-js';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 
-// Conexión a Supabase
 const supabase = createClient('https://iqndiyuhcjxrugzfyjaj.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlxbmRpeXVoY2p4cnVnemZ5amFqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQwNjUyNzMsImV4cCI6MjEwOTY0MTI3M30.h-z1IcDbwAKvgVP1jwrjW8p-cxoTzuduIvLltjLDgqM', { auth: { persistSession: false } });
 
-// Convertir enlace normal de YouTube a formato Embed
+// Función para detectar la tienda y darle un color corporativo
+const obtenerEstiloTienda = (nombreTienda) => {
+  const nombre = nombreTienda.toLowerCase();
+  if (nombre.includes('steam')) return { bg: '#1b2838', icon: '💨', textColor: '#fff' };
+  if (nombre.includes('epic')) return { bg: '#2a2a2a', icon: '🎮', textColor: '#fff' };
+  if (nombre.includes('playstation') || nombre.includes('psn')) return { bg: '#00439c', icon: '🔵', textColor: '#fff' };
+  if (nombre.includes('xbox')) return { bg: '#107c10', icon: '🟢', textColor: '#fff' };
+  return { bg: '#a855f7', icon: '🛒', textColor: '#fff' }; // Por defecto
+};
+
 const obtenerEmbedUrl = (url) => {
   if (!url) return null;
   const videoId = url.split('v=')[1]?.split('&')[0];
@@ -18,174 +26,91 @@ const obtenerEmbedUrl = (url) => {
 export default function DetalleJuego() {
   const params = useParams();
   const slug = params?.slug;
-
   const [game, setGame] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [pestañaActiva, setPestañaActiva] = useState('acerca');
 
   useEffect(() => {
     if (!slug) return;
     async function cargarJuego() {
-      const { data, error } = await supabase
-        .from('games')
-        .select('*, game_prices(*)')
-        .eq('slug', slug)
-        .single();
-      
+      const { data } = await supabase.from('games').select('*, game_prices(*)').eq('slug', slug).single();
       if (data) setGame(data);
       setLoading(false);
     }
     cargarJuego();
   }, [slug]);
 
-  if (loading) {
-    return <div style={{ textAlign: 'center', padding: '100px', color: '#94a3b8' }}>Cargando información del juego...</div>;
-  }
-
-  if (!game) {
-    return (
-      <div style={{ textAlign: 'center', padding: '100px', color: '#fff' }}>
-        <h2>Juego no encontrado</h2>
-        <Link href="/" style={{ color: '#a855f7', textDecoration: 'none' }}>← Volver al catálogo</Link>
-      </div>
-    );
-  }
+  if (loading) return <div style={{ textAlign: 'center', padding: '100px', color: '#94a3b8' }}>Cargando...</div>;
+  if (!game) return <div style={{ textAlign: 'center', padding: '100px', color: '#fff' }}>Juego no encontrado</div>;
 
   const trailerEmbed = obtenerEmbedUrl(game.trailer_url);
   const precios = game.game_prices?.sort((a, b) => Number(a.price) - Number(b.price)) || [];
 
   return (
-    <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px', color: '#e2e8f0', fontFamily: 'sans-serif' }}>
+    <div style={{ position: 'relative', minHeight: '100vh', overflow: 'hidden' }}>
       
-      {/* BOTÓN VOLVER */}
-      <Link href="/" style={{ color: '#a855f7', textDecoration: 'none', marginBottom: '20px', display: 'inline-block', fontSize: '0.9rem' }}>
-        ← Volver al catálogo
-      </Link>
+      {/* FONDO DIFUMINADO ESPECTACULAR */}
+      <div style={{ 
+        position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, 
+        backgroundImage: `url(${game.cover_image})`, 
+        backgroundSize: 'cover', backgroundPosition: 'center', 
+        filter: 'blur(40px)', opacity: 0.2, zIndex: -1, transform: 'scale(1.1)' 
+      }} />
 
-      {/* CABECERA: CARÁTULA Y TRÁILER */}
-      <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: '30px', marginBottom: '30px' }}>
-        <img 
-          src={game.cover_image} 
-          alt={game.title} 
-          style={{ width: '100%', borderRadius: '12px', boxShadow: '0 10px 25px rgba(0,0,0,0.5)', objectFit: 'cover', height: '400px' }} 
-          onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=600&h=340&fit=crop'; }}
-        />
+      {/* CONTENIDO DE LA PÁGINA */}
+      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '40px 20px', color: '#e2e8f0', zIndex: 1, position: 'relative' }}>
         
-        <div style={{ backgroundColor: '#16192b', borderRadius: '12px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #1f293d' }}>
-          {trailerEmbed ? (
-            <iframe 
-              src={trailerEmbed} 
-              style={{ width: '100%', height: '100%', border: 'none', minHeight: '400px' }}
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-              allowFullScreen
-            />
-          ) : (
-            <div style={{ color: '#94a3b8', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
-              <span style={{ fontSize: '2rem' }}>🎬</span>
-              <span>Tráiler oficial no disponible</span>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* TÍTULO Y PLATAFORMAS */}
-      <h1 style={{ fontSize: '2.5rem', color: '#fff', margin: '0 0 10px 0' }}>{game.title}</h1>
-      <p style={{ color: '#94a3b8', fontSize: '1rem', margin: '0 0 30px 0' }}>Plataformas: {game.platform || 'No especificadas'}</p>
-
-      {/* PESTAÑAS */}
-      <div style={{ display: 'flex', gap: '30px', borderBottom: '1px solid #1f293d', marginBottom: '30px' }}>
-        <button 
-          onClick={() => setPestañaActiva('acerca')}
-          style={{ background: 'none', border: 'none', color: pestañaActiva === 'acerca' ? '#fff' : '#94a3b8', borderBottom: pestañaActiva === 'acerca' ? '3px solid #a855f7' : '3px solid transparent', cursor: 'pointer', padding: '10px 0', fontSize: '1.1rem', fontWeight: 'bold', transition: 'all 0.3s' }}>
-          Acerca de
-        </button>
-        <button 
-          onClick={() => setPestañaActiva('comunidad')}
-          style={{ background: 'none', border: 'none', color: pestañaActiva === 'comunidad' ? '#fff' : '#94a3b8', borderBottom: pestañaActiva === 'comunidad' ? '3px solid #a855f7' : '3px solid transparent', cursor: 'pointer', padding: '10px 0', fontSize: '1.1rem', fontWeight: 'bold', transition: 'all 0.3s' }}>
-          Comunidad
-        </button>
-        <button 
-          onClick={() => setPestañaActiva('multimedia')}
-          style={{ background: 'none', border: 'none', color: pestañaActiva === 'multimedia' ? '#fff' : '#94a3b8', borderBottom: pestañaActiva === 'multimedia' ? '3px solid #a855f7' : '3px solid transparent', cursor: 'pointer', padding: '10px 0', fontSize: '1.1rem', fontWeight: 'bold', transition: 'all 0.3s' }}>
-          Multimedia
-        </button>
-      </div>
-
-      {/* CONTENIDO DE LAS PESTAÑAS */}
-      {pestañaActiva === 'acerca' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 350px', gap: '30px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: '40px' }}>
           
-          {/* Bloque Ficha Técnica (Izquierda) */}
-          <div style={{ backgroundColor: '#0b0d17', padding: '25px', borderRadius: '12px', border: '1px solid #1f293d' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px', marginBottom: '20px' }}>
-              <div>
-                <h4 style={{ color: '#94a3b8', fontSize: '0.8rem', margin: '0 0 5px 0', textTransform: 'uppercase' }}>Desarrollador</h4>
-                <span style={{ color: '#fff', fontSize: '0.9rem', fontWeight: 'bold' }}>{game.developer || 'No especificado'}</span>
-              </div>
-              <div>
-                <h4 style={{ color: '#94a3b8', fontSize: '0.8rem', margin: '0 0 5px 0', textTransform: 'uppercase' }}>Distribuidor</h4>
-                <span style={{ color: '#fff', fontSize: '0.9rem', fontWeight: 'bold' }}>{game.publisher || 'No especificado'}</span>
-              </div>
-              <div>
-                <h4 style={{ color: '#94a3b8', fontSize: '0.8rem', margin: '0 0 5px 0', textTransform: 'uppercase' }}>Géneros</h4>
-                <span style={{ color: '#fff', fontSize: '0.9rem', fontWeight: 'bold' }}>{game.genres || 'No especificado'}</span>
-              </div>
-              <div>
-                <h4 style={{ color: '#94a3b8', fontSize: '0.8rem', margin: '0 0 5px 0', textTransform: 'uppercase' }}>Modos de Juego</h4>
-                <span style={{ color: '#fff', fontSize: '0.9rem', fontWeight: 'bold' }}>{game.game_modes || 'No especificado'}</span>
-              </div>
-              <div>
-                <h4 style={{ color: '#94a3b8', fontSize: '0.8rem', margin: '0 0 5px 0', textTransform: 'uppercase' }}>Temáticas</h4>
-                <span style={{ color: '#fff', fontSize: '0.9rem', fontWeight: 'bold' }}>{game.themes || 'No especificado'}</span>
-              </div>
-              <div>
-                <h4 style={{ color: '#94a3b8', fontSize: '0.8rem', margin: '0 0 5px 0', textTransform: 'uppercase' }}>Motor Gráfico</h4>
-                <span style={{ color: '#fff', fontSize: '0.9rem', fontWeight: 'bold' }}>{game.game_engine || 'No especificado'}</span>
-              </div>
-            </div>
+          {/* Columna Izquierda: Carátula y Botones de Compra */}
+          <div>
+            <img src={game.cover_image} alt={game.title} style={{ width: '100%', borderRadius: '12px', boxShadow: '0 15px 35px rgba(0,0,0,0.6)', marginBottom: '30px' }} />
             
-            <h3 style={{ color: '#fff', fontSize: '1.2rem', marginTop: '30px', borderBottom: '1px solid #1f293d', paddingBottom: '10px' }}>Resumen</h3>
-            <p style={{ color: '#cbd5e1', lineHeight: '1.6', fontSize: '1rem' }}>{game.summary || 'Sin descripción disponible.'}</p>
-          </div>
-
-          {/* Bloque Precios (Derecha) */}
-          <div style={{ backgroundColor: '#16192b', padding: '25px', borderRadius: '12px', border: '1px solid #a855f7', height: 'fit-content' }}>
-            <h3 style={{ margin: '0 0 20px 0', color: '#a855f7', textAlign: 'center' }}>Mejores Ofertas</h3>
-            {precios.length > 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                {precios.map(precio => (
-                  <div key={precio.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#0f111a', padding: '15px', borderRadius: '8px' }}>
-                    <span style={{ color: '#fff', fontWeight: 'bold' }}>{precio.store_name}</span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                      <span style={{ color: '#10b981', fontSize: '1.2rem', fontWeight: 'bold' }}>${precio.price}</span>
-                      <a href={precio.affiliate_url || '#'} target="_blank" rel="noopener noreferrer" style={{ backgroundColor: '#a855f7', color: '#fff', padding: '8px 15px', borderRadius: '4px', textDecoration: 'none', fontSize: '0.9rem', fontWeight: 'bold' }}>
-                        Comprar
+            {/* SECCIÓN DE VENTAS (BOTONES ESTILIZADOS) */}
+            <div style={{ backgroundColor: 'rgba(22, 25, 43, 0.8)', padding: '20px', borderRadius: '12px', border: '1px solid #2dd4bf', backdropFilter: 'blur(10px)' }}>
+              <h3 style={{ margin: '0 0 20px 0', color: '#2dd4bf', textAlign: 'center' }}>Dónde Comprar</h3>
+              {precios.length > 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {precios.map(precio => {
+                    const estilo = obtenerEstiloTienda(precio.store_name);
+                    return (
+                      <a key={precio.id} href={precio.affiliate_url || '#'} target="_blank" rel="noopener noreferrer" 
+                         style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: estilo.bg, padding: '12px 15px', borderRadius: '8px', textDecoration: 'none', color: estilo.textColor, fontWeight: 'bold', transition: 'transform 0.2s', boxShadow: '0 4px 10px rgba(0,0,0,0.3)' }}
+                         onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
+                         onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <span style={{ fontSize: '1.2rem' }}>{estilo.icon}</span>
+                          <span>{precio.store_name}</span>
+                        </div>
+                        <span style={{ backgroundColor: 'rgba(0,0,0,0.4)', padding: '4px 8px', borderRadius: '4px' }}>${precio.price}</span>
                       </a>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p style={{ textAlign: 'center', color: '#94a3b8', fontSize: '0.9rem' }}>Buscando ofertas... (O el juego aún no se lanza)</p>
-            )}
+                    );
+                  })}
+                </div>
+              ) : (
+                <p style={{ textAlign: 'center', color: '#94a3b8', fontSize: '0.9rem' }}>Aún no hay ofertas de tiendas disponibles.</p>
+              )}
+            </div>
           </div>
-        </div>
-      )}
 
-      {pestañaActiva === 'comunidad' && (
-        <div style={{ padding: '40px', backgroundColor: '#16192b', borderRadius: '12px', textAlign: 'center', border: '1px solid #1f293d' }}>
-          <h3 style={{ color: '#fff' }}>Foros y Comunidad</h3>
-          <p style={{ color: '#94a3b8' }}>Próximamente los jugadores podrán dejar sus reseñas y comentarios sobre {game.title}.</p>
-        </div>
-      )}
+          {/* Columna Derecha: Tráiler, Título y Ficha */}
+          <div>
+            <h1 style={{ fontSize: '3.5rem', color: '#fff', margin: '0 0 10px 0', textShadow: '2px 2px 4px rgba(0,0,0,0.8)' }}>{game.title}</h1>
+            <p style={{ color: '#2dd4bf', fontSize: '1.2rem', fontWeight: 'bold', margin: '0 0 30px 0' }}>{game.platform}</p>
 
-      {pestañaActiva === 'multimedia' && (
-        <div style={{ padding: '40px', backgroundColor: '#16192b', borderRadius: '12px', textAlign: 'center', border: '1px solid #1f293d' }}>
-          <h3 style={{ color: '#fff' }}>Galería de Imágenes</h3>
-          <p style={{ color: '#94a3b8' }}>Más capturas de pantalla y material promocional estarán disponibles pronto.</p>
-        </div>
-      )}
+            {trailerEmbed && (
+              <div style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid #1f293d', boxShadow: '0 10px 30px rgba(0,0,0,0.6)', marginBottom: '30px', height: '450px' }}>
+                <iframe src={trailerEmbed} style={{ width: '100%', height: '100%', border: 'none' }} allowFullScreen />
+              </div>
+            )}
 
+            <div style={{ backgroundColor: 'rgba(11, 13, 23, 0.7)', padding: '25px', borderRadius: '12px', border: '1px solid #1f293d', backdropFilter: 'blur(10px)' }}>
+              <h3 style={{ color: '#fff', margin: '0 0 15px 0' }}>Resumen</h3>
+              <p style={{ color: '#cbd5e1', lineHeight: '1.8', fontSize: '1.1rem' }}>{game.summary}</p>
+            </div>
+          </div>
+
+        </div>
+      </div>
     </div>
   );
 }
