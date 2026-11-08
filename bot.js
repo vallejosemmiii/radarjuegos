@@ -1,8 +1,13 @@
 const { createClient } = require('@supabase/supabase-js');
 
+// Credenciales de Supabase
 const SUPABASE_URL = 'https://iqndiyuhcjxrugzfyjaj.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlxbmRpeXVoY2p4cnVnemZ5amFqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQwNjUyNzMsImV4cCI6MjEwOTY0MTI3M30.h-z1IcDbwAKvgVP1jwrjW8p-cxoTzuduIvLltjLDgqM';
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// Credenciales de Twitch / IGDB
+const TWITCH_CLIENT_ID = 'b3u5wqtgayx1s0k8a331sadkv81euc';
+const TWITCH_CLIENT_SECRET = 'v2hsvqi95bu9rq4nsj2bbktkclzx0a';
 
 const tiendas = {
     "1": "Steam", "2": "GamersGate", "3": "GreenManGaming", "4": "Amazon",
@@ -10,24 +15,56 @@ const tiendas = {
     "25": "Epic Games", "35": "CDKeys"
 };
 
+async function getIGDBToken() {
+    const res = await fetch(`https://id.twitch.tv/oauth2/token?client_id=${TWITCH_CLIENT_ID}&client_secret=${TWITCH_CLIENT_SECRET}&grant_type=client_credentials`, { method: 'POST' });
+    const data = await res.json();
+    return data.access_token;
+}
+
 async function ejecutarBot() {
-    console.log("🤖 Iniciando Bot Pro de Radar Juegos (Precios + Portadas)...");
+    console.log("🤖 Iniciando Bot Extremo: Precios Multitienda + Fichas Técnicas IGDB...");
     
-    const { data: games, error } = await supabase.from('games').select('id, title, cover_image');
+    const igdbToken = await getIGDBToken();
+    if (!igdbToken) return console.error("❌ Error obteniendo token de Twitch.");
+
+    const { data: games, error } = await supabase.from('games').select('id, title, developer');
     if (error) return console.error("Error leyendo Supabase:", error);
-    
-    console.log(`🎮 Encontrados ${games.length} juegos. Sincronizando con la red...`);
 
     for (const game of games) {
         try {
+            // 1. EXTRAER FICHA TÉCNICA DE IGDB (Solo si está vacía para ahorrar recursos)
+            if (!game.developer) {
+                const query = `search "${game.title}"; fields involved_companies.company.name, involved_companies.developer, involved_companies.publisher, genres.name, game_modes.name, game_engines.name, themes.name; limit 1;`;
+                const igdbRes = await fetch('https://api.igdb.com/v4/games', {
+                    method: 'POST',
+                    headers: { 'Client-ID': TWITCH_CLIENT_ID, 'Authorization': `Bearer ${igdbToken}` },
+                    body: query
+                });
+                const igdbData = await igdbRes.json();
+
+                if (igdbData && igdbData.length > 0) {
+                    const info = igdbData[0];
+                    const developer = info.involved_companies ? info.involved_companies.find(c => c.developer)?.company?.name : 'Desconocido';
+                    const publisher = info.involved_companies ? info.involved_companies.find(c => c.publisher)?.company?.name : 'Desconocido';
+                    
+                    await supabase.from('games').update({
+                        developer: developer,
+                        publisher: publisher,
+                        genres: info.genres ? info.genres.map(g => g.name).join(', ') : 'No especificado',
+                        game_modes: info.game_modes ? info.game_modes.map(m => m.name).join(', ') : 'No especificado',
+                        game_engine: info.game_engines ? info.game_engines.map(e => e.name).join(', ') : 'Motor Personalizado',
+                        themes: info.themes ? info.themes.map(t => t.name).join(', ') : 'No especificado'
+                    }).eq('id', game.id);
+                    console.log(`🧠 Metadata IGDB actualizada para: ${game.title}`);
+                }
+            }
+
+            // 2. ACTUALIZAR PRECIOS EN CHEAPSHARK
             const res = await fetch(`https://www.cheapshark.com/api/1.0/deals?title=${encodeURIComponent(game.title)}&exact=0`);
             const deals = await res.json();
 
             if (deals && deals.length > 0) {
-                // Actualizamos precios
                 await supabase.from('game_prices').delete().eq('game_id', game.id);
-                
-                let ofertasGuardadas = 0;
                 for (const deal of deals.slice(0, 5)) {
                     const nombreTienda = tiendas[deal.storeID] || "Tienda Global";
                     await supabase.from('game_prices').insert({
@@ -37,29 +74,17 @@ async function ejecutarBot() {
                         currency: 'USD',
                         affiliate_url: `https://www.cheapshark.com/redirect?dealID=${deal.dealID}`
                     });
-                    ofertasGuardadas++;
                 }
-
-                // Si la portada es un placeholder genérico, la actualizamos automáticamente con la imagen real de la API
-                if (game.cover_image && (game.cover_image.includes('placeholder') || game.cover_image.includes('via.placeholder'))) {
-                    const thumbReal = deals[0].thumb;
-                    if (thumbReal) {
-                        await supabase.from('games').update({ cover_image: thumbReal }).eq('id', game.id);
-                        console.log(`🖼️ Portada real asignada para: ${game.title}`);
-                    }
-                }
-
-                console.log(`✅ ${game.title}: ${ofertasGuardadas} ofertas actualizadas.`);
-            } else {
-                console.log(`⚠️ ${game.title}: Sin descuentos nuevos hoy.`);
+                console.log(`✅ Precios actualizados para: ${game.title}`);
             }
+            
         } catch (err) {
             console.log(`❌ Error con ${game.title}:`, err.message);
         }
         
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 500)); // Retardo para no saturar las APIs
     }
-    console.log("🎉 Sincronización completa del Bot.");
+    console.log("🎉 Sincronización completa de Fichas y Precios.");
 }
 
 ejecutarBot();
