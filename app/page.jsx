@@ -7,7 +7,7 @@ import Link from 'next/link';
 // Conexión a Supabase
 const supabase = createClient('https://iqndiyuhcjxrugzfyjaj.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlxbmRpeXVoY2p4cnVnemZ5amFqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQwNjUyNzMsImV4cCI6MjEwOTY0MTI3M30.h-z1IcDbwAKvgVP1jwrjW8p-cxoTzuduIvLltjLDgqM', { auth: { persistSession: false } });
 
-// Componente del Reloj Regresivo estilo IGDB
+// Componente del Reloj Regresivo
 const RelojRegresivo = ({ fechaDestino }) => {
   const calcularTiempo = () => {
     const diferencia = +new Date(fechaDestino) - +new Date();
@@ -60,21 +60,23 @@ export default function Catalogo() {
 
   useEffect(() => {
     async function cargarDatos() {
-      const { data } = await supabase.from('games').select('*, game_prices(*)').order('release_date', { ascending: false });
+      const { data } = await supabase.from('games').select('*, game_prices(*)').order('release_date', { ascending: true });
       if (data) setGames(data);
       setLoading(false);
     }
     cargarDatos();
   }, []);
 
-  const hoy = new Date('2026-11-08'); // Fecha actual ajustada a tu contexto
+  const hoy = new Date('2026-11-08');
 
-  // Filtrar juegos
-  const proximosLanzamientos = games.filter(game => game.release_date && new Date(game.release_date) > hoy);
+  // Separar y organizar juegos
+  const futuros = games.filter(game => game.release_date && new Date(game.release_date) > hoy);
+  const mostAnticipated = futuros.slice(0, 4); // Los 4 más cercanos para la portada principal
+  const comingSoon = futuros.slice(4); // El resto de los próximos lanzamientos
+  
   const catalogoDisponible = games.filter(game => !game.release_date || new Date(game.release_date) <= hoy);
   const juegosFiltrados = catalogoDisponible.filter(game => game.title.toLowerCase().includes(busqueda.toLowerCase()));
 
-  // Formateador de fecha amigable
   const formatearFecha = (fechaString) => {
     const opciones = { day: 'numeric', month: 'long', year: 'numeric' };
     return new Date(fechaString).toLocaleDateString('en-GB', opciones);
@@ -83,31 +85,23 @@ export default function Catalogo() {
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px', color: '#e2e8f0' }}>
       
-      {/* SECCIÓN: MÁS ESPERADOS (ESTILO IGDB) */}
-      {proximosLanzamientos.length > 0 && !busqueda && (
+      {/* SECCIÓN 1: MOST ANTICIPATED (Top 4 con contador) */}
+      {mostAnticipated.length > 0 && !busqueda && (
         <div style={{ marginBottom: '60px' }}>
           <h2 style={{ fontSize: '1.2rem', color: '#fff', textTransform: 'uppercase', borderBottom: '2px solid #2dd4bf', display: 'inline-block', paddingBottom: '5px', marginBottom: '25px', letterSpacing: '1px' }}>
             Most Anticipated
           </h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(450px, 1fr))', gap: '20px' }}>
-            {proximosLanzamientos.map(game => (
+            {mostAnticipated.map(game => (
               <Link href={`/juego/${game.slug}`} key={game.id} style={{ textDecoration: 'none' }}>
                 <div style={{ 
-                  position: 'relative', 
-                  height: '240px', 
-                  borderRadius: '12px', 
-                  overflow: 'hidden',
-                  backgroundImage: `url(${game.cover_image})`,
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
-                  boxShadow: '0 8px 20px rgba(0,0,0,0.5)',
-                  transition: 'transform 0.2s',
-                  cursor: 'pointer'
+                  position: 'relative', height: '240px', borderRadius: '12px', overflow: 'hidden',
+                  backgroundImage: `url(${game.cover_image})`, backgroundSize: 'cover', backgroundPosition: 'center',
+                  boxShadow: '0 8px 20px rgba(0,0,0,0.5)', transition: 'transform 0.2s', cursor: 'pointer'
                 }}
                 onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
                 onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
                 >
-                  {/* Gradiente oscuro para que resalte el texto */}
                   <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'linear-gradient(to right, rgba(15, 17, 26, 0.9) 10%, rgba(15, 17, 26, 0.4) 100%)', padding: '25px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                     <h3 style={{ margin: '0', color: '#fff', fontSize: '1.6rem', textShadow: '2px 2px 4px rgba(0,0,0,0.8)' }}>{game.title}</h3>
                     <p style={{ color: '#cbd5e1', margin: '5px 0 20px 0', fontSize: '1rem', textShadow: '1px 1px 3px rgba(0,0,0,0.8)' }}>
@@ -122,14 +116,41 @@ export default function Catalogo() {
         </div>
       )}
 
-      {/* SECCIÓN: BUSCADOR Y CATÁLOGO */}
+      {/* SECCIÓN 2: COMING SOON (El resto de lo que está por venir) */}
+      {comingSoon.length > 0 && !busqueda && (
+        <div style={{ marginBottom: '60px' }}>
+          <h2 style={{ fontSize: '1.2rem', color: '#fff', textTransform: 'uppercase', borderBottom: '2px solid #a855f7', display: 'inline-block', paddingBottom: '5px', marginBottom: '25px', letterSpacing: '1px' }}>
+            Coming Soon
+          </h2>
+          <div className="games-grid">
+            {comingSoon.map(game => (
+              <Link href={`/juego/${game.slug}`} key={game.id} style={{ textDecoration: 'none' }}>
+                <div className="game-card">
+                  <img src={game.cover_image} alt={game.title} style={{ width: '100%', height: '180px', objectFit: 'cover' }} onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=600&h=340&fit=crop'; }} />
+                  <div className="game-info" style={{ padding: '15px' }}>
+                    <h3 style={{ margin: '0 0 5px 0', color: '#fff', fontSize: '1.1rem' }}>{game.title}</h3>
+                    <p style={{ color: '#a855f7', fontWeight: 'bold', fontSize: '0.85rem', margin: '0 0 15px 0' }}>
+                      Llega el: {formatearFecha(game.release_date)}
+                    </p>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                      <span style={{ backgroundColor: '#2dd4bf', color: '#0f111a', padding: '6px 12px', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 'bold' }}>Ver Info</span>
+                    </div>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* SECCIÓN 3: RECENTLY REVIEWED Y BUSCADOR */}
       <h2 style={{ fontSize: '1.2rem', color: '#fff', textTransform: 'uppercase', borderBottom: '2px solid #2dd4bf', display: 'inline-block', paddingBottom: '5px', marginBottom: '20px', letterSpacing: '1px' }}>
         Recently Reviewed
       </h2>
       <div style={{ marginBottom: '35px' }}>
         <input 
           type="text" 
-          placeholder="🔍 Buscar juego (ej. GTA, The Witcher, Elden Ring...)" 
+          placeholder="🔍 Buscar juego ya lanzado..." 
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
           style={{
@@ -153,7 +174,6 @@ export default function Catalogo() {
                 precios.sort((a, b) => Number(a.price) - Number(b.price));
                 mejorPrecio = `$${Number(precios[0].price).toFixed(2)}`;
               }
-              const anio = game.release_date ? game.release_date.split('-')[0] : 'TBA';
 
               return (
                 <Link href={`/juego/${game.slug}`} key={game.id} style={{ textDecoration: 'none' }}>
@@ -161,13 +181,12 @@ export default function Catalogo() {
                     <img src={game.cover_image} alt={game.title} style={{ width: '100%', height: '180px', objectFit: 'cover' }} onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=600&h=340&fit=crop'; }} />
                     <div className="game-info" style={{ padding: '15px' }}>
                       <h3 style={{ margin: '0 0 5px 0', color: '#fff', fontSize: '1.1rem' }}>{game.title}</h3>
-                      <p style={{ color: '#94a3b8', fontSize: '0.85rem', margin: '0 0 15px 0' }}>{game.platform} • {anio}</p>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '15px' }}>
                         <div>
                           <span style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block' }}>Mejor oferta</span>
                           <span style={{ color: '#10b981', fontWeight: 'bold', fontSize: '1.1rem' }}>{mejorPrecio}</span>
                         </div>
-                        <span style={{ backgroundColor: '#a855f7', color: '#fff', padding: '6px 12px', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 'bold' }}>Ver Info</span>
+                        <span style={{ backgroundColor: '#a855f7', color: '#fff', padding: '6px 12px', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 'bold' }}>Ver Ofertas</span>
                       </div>
                     </div>
                   </div>
