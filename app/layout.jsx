@@ -31,7 +31,7 @@ export default function RootLayout({ children }) {
             </h1>
           </div>
 
-          {/* Menú de Navegación (Corregido para Vercel) */}
+          {/* Menú de Navegación */}
           <nav style={{ display: 'flex', gap: '30px' }}>
             <a href="/" style={{ color: '#e2e8f0', textDecoration: 'none', fontWeight: 'bold', fontSize: '1.1rem' }}>Inicio</a>
             <a href="#" style={{ color: '#e2e8f0', textDecoration: 'none', fontWeight: 'bold', fontSize: '1.1rem' }}>Próximos</a>
@@ -46,7 +46,5 @@ export default function RootLayout({ children }) {
         
       </body>
     </html>
-  );
-}
   );
 }
