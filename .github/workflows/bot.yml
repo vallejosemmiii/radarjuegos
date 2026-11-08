@@ -2,21 +2,20 @@ name: Bot Automatizado de Precios
 
 on:
   schedule:
-    # Se ejecuta todos los días a las 08:00 AM (UTC)
     - cron: '0 8 * * *'
-  workflow_dispatch: # Crea un botón para que puedas encenderlo manualmente
+  workflow_dispatch: 
 
 jobs:
   rastrear-ofertas:
     runs-on: ubuntu-latest
     steps:
       - name: Descargar el código
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         
       - name: Preparar servidor Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 20
           
       - name: Instalar conector de Base de Datos
         run: npm install @supabase/supabase-js
