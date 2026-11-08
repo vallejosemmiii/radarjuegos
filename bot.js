@@ -22,18 +22,19 @@ async function getIGDBToken() {
 }
 
 async function ejecutarBot() {
-    console.log("🤖 Iniciando Bot (Precios + Fichas + Tráilers Reales) con permisos de Administrador...");
+    console.log("🤖 Iniciando Bot (Precios + Fichas + Tráilers Reales + Carátulas HD) con permisos de Administrador...");
     
     const igdbToken = await getIGDBToken();
     if (!igdbToken) return console.error("❌ Error obteniendo token de Twitch.");
 
-    const { data: games, error } = await supabase.from('games').select('id, title, developer, trailer_url');
+    // Seleccionamos también cover_image por si ya existe no pisarla por error (opcional, pero buena práctica)
+    const { data: games, error } = await supabase.from('games').select('id, title, developer, trailer_url, cover_image');
     if (error) return console.error("Error leyendo Supabase:", error);
 
     for (const game of games) {
         try {
-            // 1. Extraer y guardar la ficha técnica y tráiler de IGDB
-            const query = `search "${game.title}"; fields involved_companies.company.name, involved_companies.developer, involved_companies.publisher, genres.name, game_modes.name, game_engines.name, themes.name, videos.video_id; limit 1;`;
+            // 1. Extraer ficha técnica, tráiler y la CARÁTULA de IGDB (agregado cover.image_id)
+            const query = `search "${game.title}"; fields involved_companies.company.name, involved_companies.developer, involved_companies.publisher, genres.name, game_modes.name, game_engines.name, themes.name, videos.video_id, cover.image_id; limit 1;`;
             const igdbRes = await fetch('https://api.igdb.com/v4/games', {
                 method: 'POST',
                 headers: { 'Client-ID': TWITCH_CLIENT_ID, 'Authorization': `Bearer ${igdbToken}` },
@@ -57,6 +58,11 @@ async function ejecutarBot() {
                     updateData.trailer_url = `https://www.youtube.com/watch?v=${info.videos[0].video_id}`;
                 }
 
+                // ✨ LA MAGIA DE LA IMAGEN: Construir URL oficial de IGDB en resolución 1080p
+                if (info.cover && info.cover.image_id) {
+                    updateData.cover_image = `https://images.igdb.com/igdb/image/upload/t_1080p/${info.cover.image_id}.jpg`;
+                }
+
                 // Guardar los datos saltando el bloqueo RLS gracias a la llave service_role
                 await supabase.from('games').update(updateData).eq('id', game.id);
             }
@@ -77,7 +83,7 @@ async function ejecutarBot() {
                     });
                 }
             }
-            console.log(`✅ Ficha, tráiler y precios actualizados: ${game.title}`);
+            console.log(`✅ Ficha, tráiler, carátula HD y precios actualizados: ${game.title}`);
         } catch (err) {
             console.log(`❌ Error con ${game.title}:`, err.message);
         }
