@@ -9,11 +9,12 @@ function obtenerLogoTienda(nombreTienda) {
     return logos[nombreTienda] || 'https://cdn-icons-png.flaticon.com/512/1170/1170679.png';
 }
 
-// Función para transformar links de YouTube en reproductores integrados (iFrame)
+// Función para transformar links de YouTube en reproductores integrados
 function obtenerVideoIncrustado(url) {
-    if (!url) return "https://www.youtube.com/embed/dQw4w9WgXcQ"; // Video por defecto
+    if (!url) return null; // Si no hay URL, no mostramos nada falso
     const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:.*v=|.*\/|.*embed\/))([^&?]*)/);
-    return match ? `https://www.youtube.com/embed/${match[1]}?autoplay=1&mute=1` : "https://www.youtube.com/embed/dQw4w9WgXcQ";
+    return match ? `https://www.youtube.com/embed/${match[1]}?autoplay=1&mute=1` : null;
+}
 }
 
 export async function generateMetadata({ params }) {
@@ -46,16 +47,20 @@ export default async function JuegoDetalle({ params }) {
           alt={game.title} 
           style={{ width: '300px', height: '420px', objectFit: 'cover', borderRadius: '12px', boxShadow: '0 8px 24px rgba(0,0,0,0.5)' }} 
         />
-        <div style={{ flex: '1', minWidth: '300px', backgroundColor: '#0f111a', borderRadius: '12px', overflow: 'hidden' }}>
-          <iframe 
-            width="100%" 
-            height="100%" 
-            style={{ minHeight: '420px' }} 
-            src={urlVideo} 
-            frameBorder="0" 
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-            allowFullScreen>
-          </iframe>
+        <div style={{ flex: '1', minWidth: '300px', backgroundColor: '#0f111a', borderRadius: '12px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          {urlVideo ? (
+            <iframe 
+              width="100%" 
+              height="100%" 
+              style={{ minHeight: '420px' }} 
+              src={urlVideo} 
+              frameBorder="0" 
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+              allowFullScreen>
+            </iframe>
+          ) : (
+            <p style={{ color: '#64748b', fontSize: '1.2rem' }}>🎬 Tráiler oficial no disponible</p>
+          )}
         </div>
       </div>
 
