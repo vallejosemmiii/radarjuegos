@@ -15,7 +15,7 @@ export default function RootLayout({ children }) {
   };
 
   return (
-    <html lang="es" style={{ scrollBehavior: 'smooth' }}>
+    <html lang="es">
       <body style={{ backgroundColor: '#0f111a', margin: 0, fontFamily: 'system-ui, -apple-system, sans-serif', display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
         
         {/* BANNER GAMER PROFESIONAL */}
@@ -43,11 +43,11 @@ export default function RootLayout({ children }) {
             </h1>
           </div>
 
-          {/* Menú de Navegación Conectado */}
+          {/* MENÚ DE NAVEGACIÓN (Actualizado a las nuevas páginas) */}
           <nav style={{ display: 'flex', gap: '35px' }}>
             <a href="/" style={{ color: '#e2e8f0', textDecoration: 'none', fontWeight: 'bold', fontSize: '1.1rem', textTransform: 'uppercase', letterSpacing: '1px' }}>Inicio</a>
-            <a href="/#proximos" style={{ color: '#e2e8f0', textDecoration: 'none', fontWeight: 'bold', fontSize: '1.1rem', textTransform: 'uppercase', letterSpacing: '1px' }}>Próximos</a>
-            <a href="/#ofertas" style={{ color: '#e2e8f0', textDecoration: 'none', fontWeight: 'bold', fontSize: '1.1rem', textTransform: 'uppercase', letterSpacing: '1px' }}>Ofertas</a>
+            <a href="/proximos" style={{ color: '#e2e8f0', textDecoration: 'none', fontWeight: 'bold', fontSize: '1.1rem', textTransform: 'uppercase', letterSpacing: '1px' }}>Próximos</a>
+            <a href="/ofertas" style={{ color: '#e2e8f0', textDecoration: 'none', fontWeight: 'bold', fontSize: '1.1rem', textTransform: 'uppercase', letterSpacing: '1px' }}>Ofertas</a>
           </nav>
         </header>
 
