@@ -3,13 +3,6 @@ import Link from 'next/link';
 
 const supabase = createClient('https://iqndiyuhcjxrugzfyjaj.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlxbmRpeXVoY2p4cnVnemZ5amFqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQwNjUyNzMsImV4cCI6MjEwOTY0MTI3M30.h-z1IcDbwAKvgVP1jwrjW8p-cxoTzuduIvLltjLDgqM', { auth: { persistSession: false } });
 
-const trailersOficiales = {
-    1: "https://www.youtube.com/watch?v=QkkoHAzjnUs", 2: "https://www.youtube.com/watch?v=XxxboW_VC8g",
-    3: "https://www.youtube.com/watch?v=8X2kifS6fb8", 4: "https://www.youtube.com/watch?v=gmA6MrX81z4",
-    5: "https://www.youtube.com/watch?v=AKX3KuTCVSI", 6: "https://www.youtube.com/watch?v=CpjVbsk_aWY",
-    7: "https://www.youtube.com/watch?v=BzyhUWJA51Y", 8: "https://www.youtube.com/watch?v=j5W5HXlVbzI"
-};
-
 function obtenerLogoTienda(nombreTienda) {
     const logos = { 'Steam': 'https://upload.wikimedia.org/wikipedia/commons/8/83/Steam_icon_logo.svg', 'Instant Gaming': 'https://www.instant-gaming.com/themes/ig-light/images/ig-logo-round.svg', 'Epic Games': 'https://upload.wikimedia.org/wikipedia/commons/3/31/Epic_Games_logo.svg', 'Eneba': 'https://www.eneba.com/favicon.ico', 'CDKeys': 'https://www.cdkeys.com/media/favicon/default/cdkeys-favicon.png' };
     return logos[nombreTienda] || 'https://cdn-icons-png.flaticon.com/512/1170/1170679.png';
@@ -17,7 +10,7 @@ function obtenerLogoTienda(nombreTienda) {
 
 export async function generateMetadata({ params }) {
   const resolvedParams = await params;
-  const gameSlug = resolvedParams.id; // Ahora lo leemos como texto (slug)
+  const gameSlug = resolvedParams.id;
   const { data: game } = await supabase.from('games').select('title').eq('slug', gameSlug).single();
   return { title: game ? `${game.title} - Mejor Oferta` : 'Juego no encontrado' };
 }
@@ -26,9 +19,8 @@ export const revalidate = 0;
 
 export default async function JuegoDetalle({ params }) {
   const resolvedParams = await params;
-  const gameSlug = resolvedParams.id; // Ahora lo leemos como texto (slug)
+  const gameSlug = resolvedParams.id;
 
-  // Buscamos en la columna 'slug' de Supabase en lugar de 'id'
   const { data: game, error } = await supabase.from('games').select('*, game_prices(*)').eq('slug', gameSlug).single();
   
   if (error || !game) return <h2 style={{ textAlign: 'center', color: '#fff', marginTop: '60px' }}>Juego no encontrado</h2>;
@@ -36,15 +28,20 @@ export default async function JuegoDetalle({ params }) {
   const precios = game.game_prices || [];
   precios.sort((a, b) => Number(a.price) - Number(b.price));
   const anioLanzamiento = game.release_date ? game.release_date.split('-')[0] : 'Desconocido';
-  const linkTrailer = trailersOficiales[game.id] || game.trailer_url || `https://www.youtube.com/results?search_query=${encodeURIComponent(game.title + ' official trailer')}`;
+  const linkTrailer = game.trailer_url || `https://www.youtube.com/results?search_query=${encodeURIComponent(game.title + ' official trailer')}`;
   const sinopsis = game.summary && game.summary.trim() !== "" ? game.summary : `Descubre la mejor comparativa de precios para ${game.title}.`;
+  
+  // Carátula oficial garantizada de alta calidad
+  const caratulaDetalle = (game.cover_image && !game.cover_image.includes('picsum') && !game.cover_image.includes('placeholder')) 
+    ? game.cover_image 
+    : `https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=800&h=500&fit=crop`;
 
   return (
     <div>
       <Link href="/" className="btn-back">← Volver al catálogo</Link>
       <div className="detail-container">
         <div className="detail-header">
-          <img src={game.cover_image} alt={game.title} />
+          <img src={caratulaDetalle} alt={game.title} />
           <div className="detail-text">
             <h2>{game.title}</h2>
             <p className="platform">{game.platform}</p>
