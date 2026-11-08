@@ -1,10 +1,11 @@
 const { createClient } = require('@supabase/supabase-js');
 
-// Credenciales
+// Credenciales de Supabase con permisos de Administrador (service_role)
 const SUPABASE_URL = 'https://iqndiyuhcjxrugzfyjaj.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlxbmRpeXVoY2p4cnVnemZ5amFqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQwNjUyNzMsImV4cCI6MjEwOTY0MTI3M30.h-z1IcDbwAKvgVP1jwrjW8p-cxoTzuduIvLltjLDgqM';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlxbmRpeXVoY2p4cnVnemZ5amFqIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc5NDA2NTI3MywiZXhwIjoyMTA5NjQxMjczfQ.xHAwV7WGn5CkmnjNq1Uz4d18TXJyl7_5p76wbk9fU1g';
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
+// Credenciales de Twitch / IGDB
 const TWITCH_CLIENT_ID = 'b3u5wqtgayx1s0k8a331sadkv81euc';
 const TWITCH_CLIENT_SECRET = 'v2hsvqi95bu9rq4nsj2bbktkclzx0a';
 
@@ -21,7 +22,7 @@ async function getIGDBToken() {
 }
 
 async function ejecutarBot() {
-    console.log("🤖 Iniciando Bot (Precios + Fichas + Tráilers Reales)...");
+    console.log("🤖 Iniciando Bot (Precios + Fichas + Tráilers Reales) con permisos de Administrador...");
     
     const igdbToken = await getIGDBToken();
     if (!igdbToken) return console.error("❌ Error obteniendo token de Twitch.");
@@ -31,7 +32,7 @@ async function ejecutarBot() {
 
     for (const game of games) {
         try {
-            // Actualizamos ficha y tráiler en IGDB
+            // 1. Extraer y guardar la ficha técnica y tráiler de IGDB
             const query = `search "${game.title}"; fields involved_companies.company.name, involved_companies.developer, involved_companies.publisher, genres.name, game_modes.name, game_engines.name, themes.name, videos.video_id; limit 1;`;
             const igdbRes = await fetch('https://api.igdb.com/v4/games', {
                 method: 'POST',
@@ -51,15 +52,16 @@ async function ejecutarBot() {
                     themes: info.themes ? info.themes.map(t => t.name).join(', ') : 'No especificado'
                 };
                 
-                // Si IGDB tiene un video oficial, guardamos el enlace real de YouTube
+                // Extraer el enlace real del video oficial de YouTube
                 if (info.videos && info.videos.length > 0) {
                     updateData.trailer_url = `https://www.youtube.com/watch?v=${info.videos[0].video_id}`;
                 }
 
+                // Guardar los datos saltando el bloqueo RLS gracias a la llave service_role
                 await supabase.from('games').update(updateData).eq('id', game.id);
             }
 
-            // Actualizar Precios
+            // 2. Extraer y actualizar precios de CheapShark
             const res = await fetch(`https://www.cheapshark.com/api/1.0/deals?title=${encodeURIComponent(game.title)}&exact=0`);
             const deals = await res.json();
 
@@ -75,13 +77,13 @@ async function ejecutarBot() {
                     });
                 }
             }
-            console.log(`✅ Actualizado: ${game.title}`);
+            console.log(`✅ Ficha, tráiler y precios actualizados: ${game.title}`);
         } catch (err) {
             console.log(`❌ Error con ${game.title}:`, err.message);
         }
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 500)); // Retardo para cuidar las APIs
     }
-    console.log("🎉 Bot finalizado.");
+    console.log("🎉 Bot finalizado con éxito total. Revisa tu web.");
 }
 
 ejecutarBot();
