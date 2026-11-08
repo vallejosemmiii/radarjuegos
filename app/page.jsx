@@ -7,7 +7,6 @@ import Link from 'next/link';
 // Conexión a Supabase
 const supabase = createClient('https://iqndiyuhcjxrugzfyjaj.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlxbmRpeXVoY2p4cnVnemZ5amFqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQwNjUyNzMsImV4cCI6MjEwOTY0MTI3M30.h-z1IcDbwAKvgVP1jwrjW8p-cxoTzuduIvLltjLDgqM', { auth: { persistSession: false } });
 
-// Componente del Reloj Regresivo
 const RelojRegresivo = ({ fechaDestino }) => {
   const calcularTiempo = () => {
     const diferencia = +new Date(fechaDestino) - +new Date();
@@ -68,7 +67,7 @@ export default function Catalogo() {
     cargarDatos();
   }, []);
 
-  const hoy = new Date('2026-11-08'); // Fecha pivote para lanzamientos
+  const hoy = new Date('2026-11-08'); 
 
   const futuros = games.filter(game => game.release_date && new Date(game.release_date) > hoy);
   const mostAnticipated = futuros.slice(0, 4); 
@@ -85,9 +84,9 @@ export default function Catalogo() {
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px', color: '#e2e8f0' }}>
       
-      {/* SECCIÓN 1: MOST ANTICIPATED */}
+      {/* SECCIÓN 1: MOST ANTICIPATED (AQUÍ ATERRIZA EL BOTÓN "PRÓXIMOS") */}
       {mostAnticipated.length > 0 && !busqueda && (
-        <div style={{ marginBottom: '60px', marginTop: '20px' }}>
+        <div id="proximos" style={{ marginBottom: '60px', marginTop: '20px', scrollMarginTop: '100px' }}>
           <h2 style={{ fontSize: '1.4rem', color: '#fff', textTransform: 'uppercase', borderBottom: '3px solid #a855f7', display: 'inline-block', paddingBottom: '5px', marginBottom: '25px', letterSpacing: '1px' }}>
             🔥 Más Esperados
           </h2>
@@ -117,9 +116,9 @@ export default function Catalogo() {
         </div>
       )}
 
-      {/* SECCIÓN 2: BUSCADOR INTELIGENTE (AUTOCOMPLETADO) */}
-      <h2 style={{ fontSize: '1.4rem', color: '#fff', textTransform: 'uppercase', borderBottom: '3px solid #2dd4bf', display: 'inline-block', paddingBottom: '5px', marginBottom: '20px', letterSpacing: '1px' }}>
-        🔍 Explorar Catálogo
+      {/* SECCIÓN 2: BUSCADOR INTELIGENTE (AQUÍ ATERRIZA EL BOTÓN "OFERTAS") */}
+      <h2 id="ofertas" style={{ fontSize: '1.4rem', color: '#fff', textTransform: 'uppercase', borderBottom: '3px solid #2dd4bf', display: 'inline-block', paddingBottom: '5px', marginBottom: '20px', letterSpacing: '1px', scrollMarginTop: '100px' }}>
+        🔍 Explorar Catálogo y Ofertas
       </h2>
       <div style={{ marginBottom: '40px', position: 'relative', zIndex: 50 }}>
         <input 
@@ -128,7 +127,7 @@ export default function Catalogo() {
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
           onFocus={() => setSearchFocus(true)}
-          onBlur={() => setTimeout(() => setSearchFocus(false), 200)} // Retardo para permitir el clic en los enlaces
+          onBlur={() => setTimeout(() => setSearchFocus(false), 200)} 
           style={{
             width: '100%', padding: '18px 25px', fontSize: '1.2rem', backgroundColor: '#0b0d17',
             border: '2px solid #1f293d', borderRadius: '10px', color: '#fff', outline: 'none',
@@ -196,7 +195,6 @@ export default function Catalogo() {
                   <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
                     <h3 style={{ margin: '0 0 10px 0', color: '#fff', fontSize: '1.1rem' }}>{game.title}</h3>
                     
-                    {/* Condicional: Si es lanzamiento futuro muestra la fecha, si ya salió muestra el precio */}
                     {new Date(game.release_date) > hoy ? (
                       <p style={{ color: '#a855f7', fontWeight: 'bold', fontSize: '0.9rem', margin: '0 0 15px 0' }}>
                         Llega el: {formatearFecha(game.release_date)}
