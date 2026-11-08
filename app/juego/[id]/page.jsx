@@ -15,7 +15,6 @@ function obtenerVideoIncrustado(url) {
     const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:.*v=|.*\/|.*embed\/))([^&?]*)/);
     return match ? `https://www.youtube.com/embed/${match[1]}?autoplay=1&mute=1` : null;
 }
-}
 
 export async function generateMetadata({ params }) {
   const resolvedParams = await params;
