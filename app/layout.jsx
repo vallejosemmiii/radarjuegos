@@ -31,20 +31,22 @@ export default function RootLayout({ children }) {
             </h1>
           </div>
 
-          {/* Menú de Navegación */}
+          {/* Menú de Navegación (Corregido para Vercel) */}
           <nav style={{ display: 'flex', gap: '30px' }}>
-            <a href="/" style={{ color: '#e2e8f0', textDecoration: 'none', fontWeight: 'bold', fontSize: '1.1rem', transition: 'color 0.2s' }} onMouseEnter={(e) => e.target.style.color = '#2dd4bf'} onMouseLeave={(e) => e.target.style.color = '#e2e8f0'}>Inicio</a>
-            <a href="#" style={{ color: '#e2e8f0', textDecoration: 'none', fontWeight: 'bold', fontSize: '1.1rem', transition: 'color 0.2s' }} onMouseEnter={(e) => e.target.style.color = '#2dd4bf'} onMouseLeave={(e) => e.target.style.color = '#e2e8f0'}>Próximos</a>
-            <a href="#" style={{ color: '#e2e8f0', textDecoration: 'none', fontWeight: 'bold', fontSize: '1.1rem', transition: 'color 0.2s' }} onMouseEnter={(e) => e.target.style.color = '#2dd4bf'} onMouseLeave={(e) => e.target.style.color = '#e2e8f0'}>Ofertas</a>
+            <a href="/" style={{ color: '#e2e8f0', textDecoration: 'none', fontWeight: 'bold', fontSize: '1.1rem' }}>Inicio</a>
+            <a href="#" style={{ color: '#e2e8f0', textDecoration: 'none', fontWeight: 'bold', fontSize: '1.1rem' }}>Próximos</a>
+            <a href="#" style={{ color: '#e2e8f0', textDecoration: 'none', fontWeight: 'bold', fontSize: '1.1rem' }}>Ofertas</a>
           </nav>
         </header>
 
-        {/* CONTENIDO PRINCIPAL (Aquí cargan las demás páginas) */}
+        {/* CONTENIDO PRINCIPAL */}
         <main style={{ minHeight: '100vh' }}>
           {children}
         </main>
         
       </body>
     </html>
+  );
+}
   );
 }
