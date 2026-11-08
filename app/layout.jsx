@@ -15,10 +15,10 @@ export default function RootLayout({ children }) {
   };
 
   return (
-    <html lang="es">
+    <html lang="es" style={{ scrollBehavior: 'smooth' }}>
       <body style={{ backgroundColor: '#0f111a', margin: 0, fontFamily: 'system-ui, -apple-system, sans-serif', display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
         
-        {/* NUEVO BANNER GAMER PROFESIONAL */}
+        {/* BANNER GAMER PROFESIONAL */}
         <header style={{ 
           background: 'linear-gradient(90deg, #0b0d17 0%, #1a1025 50%, #0b0d17 100%)', 
           borderBottom: '2px solid #a855f7',
@@ -31,15 +31,11 @@ export default function RootLayout({ children }) {
           top: 0, 
           zIndex: 1000 
         }}>
-          {/* Logo Estilo eSports / Neón */}
+          {/* Logo Estilo eSports */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
             <h1 style={{ 
-              margin: 0, 
-              fontSize: '2.2rem', 
-              fontWeight: '900', 
-              fontStyle: 'italic', 
-              letterSpacing: '2px',
-              textTransform: 'uppercase'
+              margin: 0, fontSize: '2.2rem', fontWeight: '900', fontStyle: 'italic', 
+              letterSpacing: '2px', textTransform: 'uppercase'
             }}>
               <a href="/" style={{ color: '#fff', textDecoration: 'none', textShadow: '0 0 10px rgba(168, 85, 247, 0.5)' }}>
                 RADAR<span style={{ color: '#a855f7' }}>JUEGOS</span>
@@ -47,11 +43,11 @@ export default function RootLayout({ children }) {
             </h1>
           </div>
 
-          {/* Menú de Navegación */}
+          {/* Menú de Navegación Conectado */}
           <nav style={{ display: 'flex', gap: '35px' }}>
             <a href="/" style={{ color: '#e2e8f0', textDecoration: 'none', fontWeight: 'bold', fontSize: '1.1rem', textTransform: 'uppercase', letterSpacing: '1px' }}>Inicio</a>
-            <a href="#" style={{ color: '#e2e8f0', textDecoration: 'none', fontWeight: 'bold', fontSize: '1.1rem', textTransform: 'uppercase', letterSpacing: '1px' }}>Próximos</a>
-            <a href="#" style={{ color: '#e2e8f0', textDecoration: 'none', fontWeight: 'bold', fontSize: '1.1rem', textTransform: 'uppercase', letterSpacing: '1px' }}>Ofertas</a>
+            <a href="/#proximos" style={{ color: '#e2e8f0', textDecoration: 'none', fontWeight: 'bold', fontSize: '1.1rem', textTransform: 'uppercase', letterSpacing: '1px' }}>Próximos</a>
+            <a href="/#ofertas" style={{ color: '#e2e8f0', textDecoration: 'none', fontWeight: 'bold', fontSize: '1.1rem', textTransform: 'uppercase', letterSpacing: '1px' }}>Ofertas</a>
           </nav>
         </header>
 
