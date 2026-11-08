@@ -15,7 +15,7 @@ jobs:
       - name: Preparar servidor Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22   # <--- CAMBIADO A 22
           
       - name: Instalar conector de Base de Datos
         run: npm install @supabase/supabase-js
