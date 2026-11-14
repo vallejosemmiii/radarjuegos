@@ -4,8 +4,8 @@ const SUPABASE_URL = 'https://iqndiyuhcjxrugzfyjaj.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlxbmRpeXVoY2p4cnVnemZ5amFqIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc5NDA2NTI3MywiZXhwIjoyMTA5NjQxMjczfQ.xHAwV7WGn5CkmnjNq1Uz4d18TXJyl7_5p76wbk9fU1g';
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-const TWITCH_CLIENT_ID = 'b3u5wqtgayx1s0k8a331sadkv81euc';
-const TWITCH_CLIENT_SECRET = 'v2hsvqi95bu9rq4nsj2bbktkclzx0a';
+const TWITCH_CLIENT_ID = process.env.TWITCH_CLIENT_ID;
+const TWITCH_CLIENT_SECRET = process.env.TWITCH_CLIENT_SECRET;
 
 const tiendas = {
     "1": "Steam", "2": "GamersGate", "3": "GreenManGaming", "4": "Amazon",
@@ -14,8 +14,28 @@ const tiendas = {
 };
 
 async function getIGDBToken() {
-    const res = await fetch(`https://id.twitch.tv/oauth2/token?client_id=${TWITCH_CLIENT_ID}&client_secret=${TWITCH_CLIENT_SECRET}&grant_type=client_credentials`, { method: 'POST' });
+    if (!TWITCH_CLIENT_ID || !TWITCH_CLIENT_SECRET) {
+        console.error("❌ Faltan TWITCH_CLIENT_ID o TWITCH_CLIENT_SECRET en los secretos de GitHub.");
+        return null;
+    }
+
+    const params = new URLSearchParams({
+        client_id: TWITCH_CLIENT_ID,
+        client_secret: TWITCH_CLIENT_SECRET,
+        grant_type: 'client_credentials'
+    });
+
+    const res = await fetch('https://id.twitch.tv/oauth2/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: params
+    });
+
     const data = await res.json();
+    if (!data.access_token) {
+        console.error("❌ Respuesta de Twitch:", data);
+        return null;
+    }
     return data.access_token;
 }
 
@@ -25,16 +45,14 @@ const crearSlug = (nombre) => nombre.toLowerCase().replace(/[^a-z0-9]+/g, '-').r
 async function ejecutarBot() {
     console.log("🚀 Iniciando Bot v4.0 (Recolección Masiva + Protección de Datos Manuales)...");
     const igdbToken = await getIGDBToken();
-    if (!igdbToken) return console.error("❌ Error obteniendo token de Twitch.");
+    if (!igdbToken) return console.error("❌ No se pudo obtener el token de Twitch.");
 
-    // Cargamos los juegos actuales en memoria para evitar consultas repetidas y proteger tus cambios manuales
     const { data: existentes } = await supabase.from('games').select('*');
     const mapaExistentes = new Map((existentes || []).map(j => [j.slug, j]));
 
     const ahora = Math.floor(Date.now() / 1000);
     const campos = `name, summary, storyline, first_release_date, platforms.name, cover.image_id, videos.video_id, involved_companies.company.name, involved_companies.developer, involved_companies.publisher, genres.name, game_modes.name, game_engines.name, themes.name`;
 
-    // Función para descargar lotes paginados desde IGDB
     async function descargarLote(whereClause, sortClause, totalDeseado, etiqueta) {
         console.log(`\n🔍 Descargando hasta ${totalDeseado} juegos de: ${etiqueta}...`);
         let agregados = 0;
@@ -60,7 +78,6 @@ async function ejecutarBot() {
                 const portadaIGDB = info.cover?.image_id ? `https://images.igdb.com/igdb/image/upload/t_1080p/${info.cover.image_id}.jpg` : 'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=800&q=80';
 
                 if (previo) {
-                    // PROTECCIÓN: Solo rellena lo que falte y actualiza la fecha de lanzamiento
                     const datosActualizar = {
                         release_date: formatearFecha(info.first_release_date) || previo.release_date,
                         trailer_url: previo.trailer_url || trailerIGDB,
@@ -94,12 +111,11 @@ async function ejecutarBot() {
                     }
                 }
             }
-            await new Promise(r => setTimeout(r, 350)); // Pausa para respetar límite de 4 peticiones/seg de IGDB
+            await new Promise(r => setTimeout(r, 350));
         }
         console.log(`✅ ${etiqueta}: ${agregados} nuevos agregados | ${actualizados} actualizados.`);
     }
 
-    // 1. 100 Próximos Lanzamientos con carátula real y nivel de anticipación (hypes >= 2)
     await descargarLote(
         `cover != null & first_release_date > ${ahora} & hypes >= 2`,
         `first_release_date asc`,
@@ -107,7 +123,6 @@ async function ejecutarBot() {
         "PRÓXIMOS LANZAMIENTOS ESPERADOS"
     );
 
-    // 2. 300 Juegos Ya Lanzados de Alta Calidad (rating_count > 30)
     await descargarLote(
         `cover != null & first_release_date <= ${ahora} & total_rating_count > 30`,
         `total_rating_count desc`,
@@ -115,7 +130,6 @@ async function ejecutarBot() {
         "CATÁLOGO HISTÓRICO Y OFERTAS"
     );
 
-    // 3. Actualizar precios SOLO para juegos ya lanzados (ahorra tiempo y evita bloqueos de CheapShark)
     console.log("\n💰 Buscando mejores precios en tiendas digitales (CheapShark)...");
     const hoyISO = new Date().toISOString().split('T')[0];
     const { data: juegosLanzados } = await supabase
