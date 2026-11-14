@@ -21,4 +21,7 @@ jobs:
         run: npm install @supabase/supabase-js
         
       - name: Encender el Bot
+        env:
+          TWITCH_CLIENT_ID: ${{ secrets.TWITCH_CLIENT_ID }}
+          TWITCH_CLIENT_SECRET: ${{ secrets.TWITCH_CLIENT_SECRET }}
         run: node bot.js
