@@ -110,7 +110,6 @@ async function enriquecerConSteam(steamAppID) {
     }
 }
 
-// Filtra el objeto para enviar solo columnas que existan realmente en tu tabla Supabase
 function filtrarColumnasValidas(objeto, columnasTabla) {
     if (!columnasTabla || columnasTabla.size === 0) return objeto;
     const limpio = {};
@@ -121,7 +120,7 @@ function filtrarColumnasValidas(objeto, columnasTabla) {
 }
 
 async function ejecutarBot() {
-    console.log("🚀 Iniciando Mega-Bot v5.1 (IGDB + Steam ES + CheapShark)...");
+    console.log("🚀 Iniciando Mega-Bot v5.2 (IGDB + Steam ES + CheapShark)...");
     const igdbToken = await getIGDBToken();
     if (!igdbToken) return;
 
@@ -187,7 +186,6 @@ async function ejecutarBot() {
         console.log(`✅ ${etiqueta}: +${agregados} juegos nuevos.`);
     }
 
-    // 1. Próximos lanzamientos en los siguientes 12 meses
     await descargarRadar(
         `cover != null & first_release_date > ${ahora} & first_release_date <= ${ahora + unAnoSegundos}`,
         `first_release_date asc`,
@@ -195,7 +193,6 @@ async function ejecutarBot() {
         "CALENDARIO PRÓXIMOS 12 MESES"
     );
 
-    // 2. Lanzamientos lejanos anunciados (más de 1 año)
     await descargarRadar(
         `cover != null & first_release_date > ${ahora + unAnoSegundos}`,
         `first_release_date asc`,
@@ -203,7 +200,6 @@ async function ejecutarBot() {
         "PRÓXIMOS LANZAMIENTOS A FUTURO"
     );
 
-    // 3. Éxitos recientes (último año)
     await descargarRadar(
         `cover != null & first_release_date <= ${ahora} & first_release_date >= ${ahora - unAnoSegundos} & total_rating_count > 10`,
         `total_rating_count desc`,
@@ -211,7 +207,6 @@ async function ejecutarBot() {
         "ÉXITOS RECIENTES"
     );
 
-    // 4. Clásicos y juegos populares de catálogo
     await descargarRadar(
         `cover != null & first_release_date < ${ahora - unAnoSegundos} & total_rating_count > 50`,
         `total_rating_count desc`,
@@ -220,16 +215,23 @@ async function ejecutarBot() {
     );
 
     // =========================================================================
-    // FASE 2: REPARACIÓN DE FICHAS INCOMPLETAS
+    // FASE 2: REPARACIÓN DE FICHAS INCOMPLETAS (REVISA TODOS LOS EXISTENTES)
     // =========================================================================
-    console.log("\n🛠️ Auditando y reparando juegos sin carátula, tráiler o ficha...");
-    const { data: incompletos } = await supabase
-        .from('games')
-        .select('*')
-        .or(`cover_image.is.null,cover_image.eq.,cover_image.like.%unsplash%,trailer_url.is.null`);
+    console.log("\n🛠️ Auditando y reparando fichas incompletas...");
+    const { data: todosLosJuegos } = await supabase.from('games').select('*');
+    const incompletos = (todosLosJuegos || []).filter(j =>
+        !j.cover_image ||
+        j.cover_image.includes('unsplash') ||
+        !j.trailer_url ||
+        !j.summary ||
+        j.summary.startsWith('Sin descripción') ||
+        !j.developer ||
+        j.developer === 'No especificado' ||
+        j.developer === 'Desconocido'
+    );
 
     let reparados = 0;
-    for (const juego of (incompletos || [])) {
+    for (const juego of incompletos) {
         const cleanTitle = juego.title.replace(/"/g, '').trim();
         const candidatos = await consultarIGDB(
             igdbToken,
@@ -287,6 +289,7 @@ async function ejecutarBot() {
 
     let ofertasActualizadas = 0;
     let traduccionesSteam = 0;
+    let errorPrecioMostrado = false;
 
     for (const game of (juegosLanzados || [])) {
         try {
@@ -298,7 +301,7 @@ async function ejecutarBot() {
             const normGame = normalizarTexto(game.title);
             const dealsValidos = deals.filter(d => {
                 const normDeal = normalizarTexto(d.title);
-                return normDeal === normGame || (normDeal.startsWith(normGame) && normDeal.length <= normGame.length + 12);
+                return normDeal === normGame || (normDeal.startsWith(normGame) && normDeal.length <= normGame.length + 18);
             });
 
             if (dealsValidos.length > 0) {
@@ -318,8 +321,13 @@ async function ejecutarBot() {
                     currency: 'USD',
                     affiliate_url: `https://www.cheapshark.com/redirect?dealID=${deal.dealID}`
                 }));
-                await supabase.from('game_prices').insert(filasPrecios);
-                ofertasActualizadas++;
+
+                const { error: priceErr } = await supabase.from('game_prices').insert(filasPrecios);
+                if (priceErr && !errorPrecioMostrado) {
+                    console.error(`⚠️ Error guardando precios de "${game.title}":`, priceErr.message);
+                    errorPrecioMostrado = true;
+                }
+                if (!priceErr) ofertasActualizadas++;
 
                 const steamId = mejoresOfertas.find(d => d.steamAppID)?.steamAppID;
                 const necesitaPortada = !game.cover_image || game.cover_image.includes('unsplash');
@@ -347,7 +355,7 @@ async function ejecutarBot() {
         await esperar(220);
     }
 
-    console.log(`🎉 ¡Bot v5.1 completado! Ofertas en ${ofertasActualizadas} juegos | ${traduccionesSteam} fichas enriquecidas en español.`);
+    console.log(`🎉 ¡Bot v5.2 completado! Ofertas en ${ofertasActualizadas} juegos | ${traduccionesSteam} fichas enriquecidas en español.`);
 }
 
 ejecutarBot();
