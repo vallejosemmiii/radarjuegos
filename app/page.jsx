@@ -4,12 +4,13 @@ import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import Link from 'next/link';
 
-// Conexión a Supabase
 const supabase = createClient('https://iqndiyuhcjxrugzfyjaj.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlxbmRpeXVoY2p4cnVnemZ5amFqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQwNjUyNzMsImV4cCI6MjEwOTY0MTI3M30.h-z1IcDbwAKvgVP1jwrjW8p-cxoTzuduIvLltjLDgqM', { auth: { persistSession: false } });
 
 const RelojRegresivo = ({ fechaDestino }) => {
   const calcularTiempo = () => {
-    const diferencia = +new Date(fechaDestino) - +new Date();
+    if (!fechaDestino) return { dias: 0, horas: 0, minutos: 0 };
+    const soloFecha = fechaDestino.split('T')[0];
+    const diferencia = +new Date(`${soloFecha}T00:00:00`) - +new Date();
     let tiempo = { dias: 0, horas: 0, minutos: 0 };
     if (diferencia > 0) {
       tiempo = {
@@ -67,24 +68,31 @@ export default function Catalogo() {
     cargarDatos();
   }, []);
 
-  const hoy = new Date('2026-11-08'); 
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
 
-  const futuros = games.filter(game => game.release_date && new Date(game.release_date) > hoy);
+  const parseFechaLocal = (fechaString) => {
+    const soloFecha = fechaString.split('T')[0];
+    return new Date(`${soloFecha}T12:00:00`);
+  };
+
+  const futuros = games.filter(game => game.release_date && parseFechaLocal(game.release_date) > hoy);
   const mostAnticipated = futuros.slice(0, 4); 
   const comingSoon = futuros.slice(4); 
   
-  const catalogoDisponible = games.filter(game => !game.release_date || new Date(game.release_date) <= hoy);
+  const catalogoDisponible = games.filter(game => !game.release_date || parseFechaLocal(game.release_date) <= hoy);
   const juegosFiltrados = games.filter(game => game.title.toLowerCase().includes(busqueda.toLowerCase()));
 
   const formatearFecha = (fechaString) => {
+    if (!fechaString) return 'Por confirmar';
     const opciones = { day: 'numeric', month: 'long', year: 'numeric' };
-    return new Date(fechaString).toLocaleDateString('es-ES', opciones);
+    return parseFechaLocal(fechaString).toLocaleDateString('es-ES', opciones);
   };
 
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px', color: '#e2e8f0' }}>
       
-      {/* SECCIÓN 1: MOST ANTICIPATED (AQUÍ ATERRIZA EL BOTÓN "PRÓXIMOS") */}
+      {/* SECCIÓN 1: MOST ANTICIPATED */}
       {mostAnticipated.length > 0 && !busqueda && (
         <div id="proximos" style={{ marginBottom: '60px', marginTop: '20px', scrollMarginTop: '100px' }}>
           <h2 style={{ fontSize: '1.4rem', color: '#fff', textTransform: 'uppercase', borderBottom: '3px solid #a855f7', display: 'inline-block', paddingBottom: '5px', marginBottom: '25px', letterSpacing: '1px' }}>
@@ -116,7 +124,7 @@ export default function Catalogo() {
         </div>
       )}
 
-      {/* SECCIÓN 2: BUSCADOR INTELIGENTE (AQUÍ ATERRIZA EL BOTÓN "OFERTAS") */}
+      {/* SECCIÓN 2: BUSCADOR INTELIGENTE */}
       <h2 id="ofertas" style={{ fontSize: '1.4rem', color: '#fff', textTransform: 'uppercase', borderBottom: '3px solid #2dd4bf', display: 'inline-block', paddingBottom: '5px', marginBottom: '20px', letterSpacing: '1px', scrollMarginTop: '100px' }}>
         🔍 Explorar Catálogo y Ofertas
       </h2>
@@ -137,7 +145,6 @@ export default function Catalogo() {
           onMouseLeave={(e) => { if(!searchFocus) e.target.style.borderColor = '#1f293d'; }}
         />
         
-        {/* CAJA FLOTANTE DE RESULTADOS */}
         {searchFocus && busqueda && (
           <div style={{ 
             position: 'absolute', top: '100%', left: 0, right: 0, backgroundColor: '#16192b', 
@@ -163,7 +170,7 @@ export default function Catalogo() {
             )}
             {juegosFiltrados.length > 5 && (
               <div style={{ padding: '10px', backgroundColor: '#0b0d17', color: '#a855f7', textAlign: 'center', fontSize: '0.9rem', fontWeight: 'bold' }}>
-                Mostrando 5 de {juegosFiltrados.length} resultados. Presiona Enter para ver todos.
+                Mostrando 5 de {juegosFiltrados.length} resultados.
               </div>
             )}
           </div>
@@ -195,7 +202,7 @@ export default function Catalogo() {
                   <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
                     <h3 style={{ margin: '0 0 10px 0', color: '#fff', fontSize: '1.1rem' }}>{game.title}</h3>
                     
-                    {new Date(game.release_date) > hoy ? (
+                    {game.release_date && parseFechaLocal(game.release_date) > hoy ? (
                       <p style={{ color: '#a855f7', fontWeight: 'bold', fontSize: '0.9rem', margin: '0 0 15px 0' }}>
                         Llega el: {formatearFecha(game.release_date)}
                       </p>
