@@ -21,7 +21,6 @@ const formatearFecha = (ts) => ts ? new Date(ts * 1000).toISOString().split('T')
 const crearSlug = (nombre) => nombre.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
 const normalizarTexto = (txt) => txt.toLowerCase().replace(/[^a-z0-9]/g, '');
 
-// Seleccionar el mejor tráiler oficial de YouTube disponible
 function elegirMejorTrailer(videos) {
     if (!Array.isArray(videos) || videos.length === 0) return null;
     const prioridades = ['official trailer', 'launch trailer', 'announcement trailer', 'reveal trailer', 'trailer'];
@@ -32,13 +31,9 @@ function elegirMejorTrailer(videos) {
     return `https://www.youtube.com/watch?v=${videos[0].video_id}`;
 }
 
-// Construir la mejor imagen disponible (Portada HD -> Artwork -> Screenshot -> Fallback)
 function elegirMejorImagen(info) {
     if (info.cover?.image_id) {
         return `https://images.igdb.com/igdb/image/upload/t_cover_big_2x/${info.cover.image_id}.jpg`;
-    }
-    if (info.artworks?.length > 0 && info.artworks[0].image_id) {
-        return `https://images.igdb.com/igdb/image/upload/t_1080p/${info.artworks[0].image_id}.jpg`;
     }
     if (info.screenshots?.length > 0 && info.screenshots[0].image_id) {
         return `https://images.igdb.com/igdb/image/upload/t_1080p/${info.screenshots[0].image_id}.jpg`;
@@ -73,18 +68,26 @@ async function consultarIGDB(token, bodyQuery) {
     try {
         const res = await fetch('https://api.igdb.com/v4/games', {
             method: 'POST',
-            headers: { 'Client-ID': TWITCH_CLIENT_ID, 'Authorization': `Bearer ${token}` },
+            headers: {
+                'Client-ID': TWITCH_CLIENT_ID,
+                'Authorization': `Bearer ${token}`,
+                'Accept': 'application/json'
+            },
             body: bodyQuery
         });
-        if (!res.ok) return [];
+        if (!res.ok) {
+            const errText = await res.text();
+            console.error(`⚠️ Error IGDB (${res.status}): ${errText}`);
+            return [];
+        }
         const data = await res.json();
         return Array.isArray(data) ? data : [];
     } catch (e) {
+        console.error("⚠️ Error de red IGDB:", e.message);
         return [];
     }
 }
 
-// Obtener sinopsis en español e imagen HD desde Steam si existe steamAppID
 async function enriquecerConSteam(steamAppID) {
     if (!steamAppID) return null;
     try {
@@ -100,32 +103,49 @@ async function enriquecerConSteam(steamAppID) {
 
         return {
             summaryEs: descripcionLimpia,
-            coverSteam: `https://cdn.akamai.steamstatic.com/steam/apps/${steamAppID}/library_600x900_2x.jpg`,
-            headerSteam: info.header_image || null
+            coverSteam: `https://cdn.akamai.steamstatic.com/steam/apps/${steamAppID}/library_600x900_2x.jpg`
         };
     } catch (e) {
         return null;
     }
 }
 
+// Filtra el objeto para enviar solo columnas que existan realmente en tu tabla Supabase
+function filtrarColumnasValidas(objeto, columnasTabla) {
+    if (!columnasTabla || columnasTabla.size === 0) return objeto;
+    const limpio = {};
+    for (const [clave, valor] of Object.entries(objeto)) {
+        if (columnasTabla.has(clave)) limpio[clave] = valor;
+    }
+    return limpio;
+}
+
 async function ejecutarBot() {
-    console.log("🚀 Iniciando Mega-Bot v5.0 (IGDB + Steam ES + CheapShark)...");
+    console.log("🚀 Iniciando Mega-Bot v5.1 (IGDB + Steam ES + CheapShark)...");
     const igdbToken = await getIGDBToken();
     if (!igdbToken) return;
 
-    const { data: existentes } = await supabase.from('games').select('*');
+    const { data: existentes, error: errorLectura } = await supabase.from('games').select('*');
+    if (errorLectura) {
+        console.error("❌ Error leyendo Supabase:", errorLectura.message);
+        return;
+    }
+
+    console.log(`📦 Juegos actuales en base de datos: ${(existentes || []).length}`);
     const mapaExistentes = new Map((existentes || []).map(j => [j.slug, j]));
+    const columnasTabla = existentes && existentes.length > 0 ? new Set(Object.keys(existentes[0])) : new Set();
 
     const ahora = Math.floor(Date.now() / 1000);
     const unAnoSegundos = 31536000;
-    const campos = `name, summary, storyline, first_release_date, hypes, total_rating_count, platforms.name, cover.image_id, artworks.image_id, screenshots.image_id, videos.name, videos.video_id, involved_companies.company.name, involved_companies.developer, involved_companies.publisher, genres.name, game_modes.name, game_engines.name, themes.name`;
+    const campos = `name, summary, storyline, first_release_date, total_rating_count, platforms.name, cover.image_id, screenshots.image_id, videos.name, videos.video_id, involved_companies.company.name, involved_companies.developer, involved_companies.publisher, genres.name, game_modes.name, game_engines.name, themes.name`;
 
     // =========================================================================
-    // FASE 1: DESCARGA MASIVA POR 4 RADARES DE IGDB
+    // FASE 1: DESCARGA MASIVA DESDE IGDB
     // =========================================================================
     async function descargarRadar(whereClause, sortClause, totalDeseado, etiqueta) {
         console.log(`\n📡 Radar: ${etiqueta} (Objetivo: ${totalDeseado})...`);
         let agregados = 0;
+        let primerErrorMostrado = false;
 
         for (let offset = 0; offset < totalDeseado; offset += 100) {
             const query = `fields ${campos}; where ${whereClause}; sort ${sortClause}; limit 100; offset ${offset};`;
@@ -136,7 +156,7 @@ async function ejecutarBot() {
                 const slug = crearSlug(info.name);
                 if (!slug || mapaExistentes.has(slug)) continue;
 
-                const nuevoJuego = {
+                const nuevoJuego = filtrarColumnasValidas({
                     title: info.name,
                     slug,
                     summary: info.summary || info.storyline || 'Sin descripción detallada disponible.',
@@ -150,85 +170,85 @@ async function ejecutarBot() {
                     game_modes: info.game_modes ? info.game_modes.map(m => m.name).join(', ') : 'Un jugador',
                     game_engine: info.game_engines ? info.game_engines.map(e => e.name).join(', ') : 'Propio',
                     themes: info.themes ? info.themes.map(t => t.name).join(', ') : 'Varios'
-                };
+                }, columnasTabla);
 
-                const { data: insertado } = await supabase.from('games').insert(nuevoJuego).select().single();
+                const { data: insertado, error: insertError } = await supabase.from('games').insert(nuevoJuego).select().single();
+                if (insertError && !primerErrorMostrado) {
+                    console.error(`⚠️ Error al guardar "${info.name}" en Supabase:`, insertError.message);
+                    primerErrorMostrado = true;
+                }
                 if (insertado) {
                     mapaExistentes.set(slug, insertado);
                     agregados++;
                 }
             }
-            await esperar(280);
+            await esperar(300);
         }
         console.log(`✅ ${etiqueta}: +${agregados} juegos nuevos.`);
     }
 
-    // 1. Top 100 más esperados del futuro (por Hype)
+    // 1. Próximos lanzamientos en los siguientes 12 meses
     await descargarRadar(
-        `version_parent = null & first_release_date > ${ahora} & hypes >= 1`,
-        `hypes desc`,
-        100,
-        "MÁS ESPERADOS (HYPE)"
-    );
-
-    // 2. Próximos 100 lanzamientos en los siguientes 12 meses (orden cronológico)
-    await descargarRadar(
-        `version_parent = null & cover != null & first_release_date > ${ahora} & first_release_date <= ${ahora + unAnoSegundos}`,
+        `cover != null & first_release_date > ${ahora} & first_release_date <= ${ahora + unAnoSegundos}`,
         `first_release_date asc`,
-        100,
+        150,
         "CALENDARIO PRÓXIMOS 12 MESES"
     );
 
-    // 3. Top 150 lanzamientos recientes (último año)
+    // 2. Lanzamientos lejanos anunciados (más de 1 año)
     await descargarRadar(
-        `version_parent = null & cover != null & first_release_date <= ${ahora} & first_release_date >= ${ahora - unAnoSegundos} & total_rating_count > 10`,
+        `cover != null & first_release_date > ${ahora + unAnoSegundos}`,
+        `first_release_date asc`,
+        100,
+        "PRÓXIMOS LANZAMIENTOS A FUTURO"
+    );
+
+    // 3. Éxitos recientes (último año)
+    await descargarRadar(
+        `cover != null & first_release_date <= ${ahora} & first_release_date >= ${ahora - unAnoSegundos} & total_rating_count > 10`,
         `total_rating_count desc`,
         150,
         "ÉXITOS RECIENTES"
     );
 
-    // 4. Top 300 clásicos y juegos de catálogo con alta valoración
+    // 4. Clásicos y juegos populares de catálogo
     await descargarRadar(
-        `version_parent = null & cover != null & first_release_date < ${ahora - unAnoSegundos} & total_rating_count > 60`,
+        `cover != null & first_release_date < ${ahora - unAnoSegundos} & total_rating_count > 50`,
         `total_rating_count desc`,
         300,
         "CATÁLOGO HISTÓRICO TOP"
     );
 
     // =========================================================================
-    // FASE 2: REPARACIÓN INTELIGENTE DE FICHAS INCOMPLETAS
+    // FASE 2: REPARACIÓN DE FICHAS INCOMPLETAS
     // =========================================================================
     console.log("\n🛠️ Auditando y reparando juegos sin carátula, tráiler o ficha...");
     const { data: incompletos } = await supabase
         .from('games')
         .select('*')
-        .or(`cover_image.is.null,cover_image.eq.,cover_image.like.%unsplash%,trailer_url.is.null,developer.eq.No especificado`);
+        .or(`cover_image.is.null,cover_image.eq.,cover_image.like.%unsplash%,trailer_url.is.null`);
 
     let reparados = 0;
     for (const juego of (incompletos || [])) {
         const cleanTitle = juego.title.replace(/"/g, '').trim();
-        // Buscamos top 5 coincidencias en IGDB (sin sort, porque IGDB prohíbe sort + search)
         const candidatos = await consultarIGDB(
             igdbToken,
-            `search "${cleanTitle}"; fields ${campos}; where version_parent = null; limit 5;`
+            `search "${cleanTitle}"; fields ${campos}; limit 5;`
         );
 
         if (candidatos.length > 0) {
-            // Elegimos el candidato con coincidencia exacta de nombre o mayor cantidad de votos/hype
             const normTarget = normalizarTexto(juego.title);
             candidatos.sort((a, b) => {
                 const exactA = normalizarTexto(a.name) === normTarget ? 100000 : 0;
                 const exactB = normalizarTexto(b.name) === normTarget ? 100000 : 0;
-                const scoreA = exactA + (a.total_rating_count || 0) + (a.hypes || 0) * 5;
-                const scoreB = exactB + (b.total_rating_count || 0) + (b.hypes || 0) * 5;
-                return scoreB - scoreA;
+                return (exactB + (b.total_rating_count || 0)) - (exactA + (a.total_rating_count || 0));
             });
 
             const mejor = candidatos[0];
             const esGTAVI = juego.slug.includes('grand-theft-auto-vi') || juego.slug.includes('gta-vi');
             const tienePortadaValida = juego.cover_image && !juego.cover_image.includes('unsplash');
 
-            const updateData = {
+            const updateData = filtrarColumnasValidas({
                 cover_image: tienePortadaValida ? juego.cover_image : elegirMejorImagen(mejor),
                 trailer_url: juego.trailer_url || elegirMejorTrailer(mejor.videos),
                 summary: (juego.summary && !juego.summary.startsWith('Sin descripción'))
@@ -245,14 +265,8 @@ async function ejecutarBot() {
                     : (mejor.involved_companies?.find(c => c.publisher)?.company?.name || 'Editor Global'),
                 genres: (juego.genres && juego.genres !== 'No especificado')
                     ? juego.genres
-                    : (mejor.genres ? mejor.genres.map(g => g.name).join(', ') : 'Acción, Aventura'),
-                game_engine: (juego.game_engine && juego.game_engine !== 'No especificado')
-                    ? juego.game_engine
-                    : (mejor.game_engines ? mejor.game_engines.map(e => e.name).join(', ') : 'Propio'),
-                themes: (juego.themes && juego.themes !== 'No especificado')
-                    ? juego.themes
-                    : (mejor.themes ? mejor.themes.map(t => t.name).join(', ') : 'Varios')
-            };
+                    : (mejor.genres ? mejor.genres.map(g => g.name).join(', ') : 'Acción, Aventura')
+            }, columnasTabla);
 
             await supabase.from('games').update(updateData).eq('id', juego.id);
             reparados++;
@@ -262,7 +276,7 @@ async function ejecutarBot() {
     console.log(`✅ Fichas reparadas: ${reparados}`);
 
     // =========================================================================
-    // FASE 3: OFERTAS EN VIVO (CHEAPSHARK) + TRADUCCIÓN DE SINOPSIS (STEAM ES)
+    // FASE 3: OFERTAS (CHEAPSHARK) + DESCRIPCIONES EN ESPAÑOL (STEAM)
     // =========================================================================
     console.log("\n💰 Rastreando precios reales y traduciendo descripciones al español...");
     const hoyISO = new Date().toISOString().split('T')[0];
@@ -281,7 +295,6 @@ async function ejecutarBot() {
             const deals = await res.json();
             if (!Array.isArray(deals) || deals.length === 0) continue;
 
-            // Filtrar solo ofertas cuyo título corresponda realmente al juego (evita DLCs sueltos)
             const normGame = normalizarTexto(game.title);
             const dealsValidos = deals.filter(d => {
                 const normDeal = normalizarTexto(d.title);
@@ -289,7 +302,6 @@ async function ejecutarBot() {
             });
 
             if (dealsValidos.length > 0) {
-                // Ordenar por menor precio y dejar 1 oferta por tienda
                 dealsValidos.sort((a, b) => parseFloat(a.salePrice) - parseFloat(b.salePrice));
                 const porTienda = new Map();
                 for (const d of dealsValidos) {
@@ -309,12 +321,11 @@ async function ejecutarBot() {
                 await supabase.from('game_prices').insert(filasPrecios);
                 ofertasActualizadas++;
 
-                // Enriquecer con Steam Español (hasta 60 por ejecución para mantener velocidad óptima)
                 const steamId = mejoresOfertas.find(d => d.steamAppID)?.steamAppID;
                 const necesitaPortada = !game.cover_image || game.cover_image.includes('unsplash');
                 const necesitaEspanol = !game.summary || game.summary.startsWith('Sin descripción') || !/[áéíóúñ¿¡]/i.test(game.summary);
 
-                if (steamId && (necesitaPortada || necesitaEspanol) && traduccionesSteam < 60) {
+                if (steamId && (necesitaPortada || necesitaEspanol) && traduccionesSteam < 80) {
                     const datosSteam = await enriquecerConSteam(steamId);
                     if (datosSteam) {
                         const patch = {};
@@ -336,7 +347,7 @@ async function ejecutarBot() {
         await esperar(220);
     }
 
-    console.log(`🎉 ¡Bot v5.0 completado! Ofertas en ${ofertasActualizadas} juegos | ${traduccionesSteam} fichas enriquecidas en español.`);
+    console.log(`🎉 ¡Bot v5.1 completado! Ofertas en ${ofertasActualizadas} juegos | ${traduccionesSteam} fichas enriquecidas en español.`);
 }
 
 ejecutarBot();
