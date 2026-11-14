@@ -19,7 +19,15 @@ export default function Proximos() {
     cargarDatos();
   }, []);
 
-  const formatearFecha = (fecha) => new Date(fecha).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
+  const formatearFecha = (fecha) => {
+    if (!fecha) return 'Por confirmar';
+    const soloFecha = fecha.split('T')[0];
+    return new Date(`${soloFecha}T12:00:00`).toLocaleDateString('es-ES', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    });
+  };
 
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '40px 20px', color: '#e2e8f0' }}>
