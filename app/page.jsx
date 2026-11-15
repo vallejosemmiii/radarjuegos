@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import Link from 'next/link';
+import StoreLogo from './components/StoreLogo';
 
 const supabase = createClient(
   'https://iqndiyuhcjxrugzfyjaj.supabase.co',
@@ -156,7 +157,6 @@ export default function Catalogo() {
     });
   };
 
-  // 1. TOP 4 MÁS ESPERADOS AAA
   const futurosAAA = games
     .filter((game) => game.release_date && parseFechaLocal(game.release_date) > hoy)
     .map((game) => ({ ...game, puntajeAAA: calcularPuntajeAAA(game) }))
@@ -167,7 +167,6 @@ export default function Catalogo() {
 
   const mostAnticipatedAAA = futurosAAA.slice(0, 4);
 
-  // 2. JUEGOS GRATUITOS ACTIVOS ($0)
   const gratuitosActivos = games
     .filter(
       (game) =>
@@ -184,7 +183,6 @@ export default function Catalogo() {
     })
     .slice(0, 4);
 
-  // 3. JUEGOS LANZADOS CON OFERTAS DE PAGO ACTIVAS (> $0)
   const conOfertas = games
     .filter((game) => {
       const esLanzado = !game.release_date || parseFechaLocal(game.release_date) <= hoy;
@@ -201,20 +199,17 @@ export default function Catalogo() {
     })
     .filter((game) => game.mejorPrecioNum > 0);
 
-  // Más jugados en oferta (Top 8 por popularidad AAA)
   const masJugadosEnOferta = [...conOfertas]
     .sort((a, b) => b.puntajeAAA - a.puntajeAAA || a.mejorPrecioNum - b.mejorPrecioNum)
     .slice(0, 8);
 
   const idsMasJugados = new Set(masJugadosEnOferta.map((g) => g.id));
 
-  // Mejores ofertas destacadas (Top 8 más baratos que no se repitan arriba)
   const mejoresOfertasDestacadas = [...conOfertas]
     .filter((g) => !idsMasJugados.has(g.id))
     .sort((a, b) => a.mejorPrecioNum - b.mejorPrecioNum)
     .slice(0, 8);
 
-  // Búsqueda global en todo el catálogo
   const juegosFiltrados = games.filter((game) =>
     game.title.toLowerCase().includes(busqueda.toLowerCase())
   );
@@ -257,8 +252,9 @@ export default function Catalogo() {
             </h3>
             <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
-                <span style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block' }}>
-                  {game.tiendaTop || 'Mejor oferta'}
+                <span style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '2px' }}>
+                  <StoreLogo storeName={game.tiendaTop} size={13} />
+                  <span>{game.tiendaTop || 'Mejor oferta'}</span>
                 </span>
                 <span style={{ color: '#10b981', fontWeight: 'bold', fontSize: '1.2rem' }}>
                   {esGratis ? 'GRATIS' : `$${game.mejorPrecioNum.toFixed(2)}`}
@@ -464,7 +460,7 @@ export default function Catalogo() {
             </div>
           )}
 
-          {/* SECCIÓN 5: MEJORES OFERTAS DESTACADAS (MENOR PRECIO) */}
+          {/* SECCIÓN 5: MEJORES OFERTAS DESTACADAS */}
           {mejoresOfertasDestacadas.length > 0 && (
             <div style={{ marginBottom: '30px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px', marginBottom: '25px' }}>
