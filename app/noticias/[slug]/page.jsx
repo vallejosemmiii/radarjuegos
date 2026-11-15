@@ -84,8 +84,39 @@ export default async function DetalleNoticia({ params }) {
 
   const urlCompleta = `https://radarjuegos.lat/noticias/${noticia.slug}`;
 
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'NewsArticle',
+    headline: noticia.title,
+    description: noticia.summary || noticia.title,
+    image: [noticia.cover_image || FALLBACK_IMG],
+    datePublished: noticia.published_at || noticia.created_at,
+    dateModified: noticia.published_at || noticia.created_at,
+    mainEntityOfPage: {
+      '@type': 'WebPage',
+      '@id': urlCompleta,
+    },
+    author: {
+      '@type': 'Organization',
+      name: noticia.source_name || 'RadarJuegos',
+    },
+    publisher: {
+      '@type': 'Organization',
+      name: 'RadarJuegos',
+      logo: {
+        '@type': 'ImageObject',
+        url: 'https://radarjuegos.lat/icon.svg',
+      },
+    },
+  };
+
   return (
     <article style={{ maxWidth: '900px', margin: '0 auto', padding: '40px 20px', color: '#e2e8f0' }}>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+
       <div style={{ marginBottom: '25px' }}>
         <Link href="/noticias" style={{ color: '#94a3b8', textDecoration: 'none', fontWeight: 'bold', fontSize: '0.95rem' }}>
           ← Volver a todas las noticias
