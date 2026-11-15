@@ -21,6 +21,12 @@ const formatearFecha = (ts) => ts ? new Date(ts * 1000).toISOString().split('T')
 const crearSlug = (nombre) => nombre.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
 const normalizarTexto = (txt) => txt.toLowerCase().replace(/[^a-z0-9]/g, '');
 
+function sanitizarFechaISO(fechaStr, fallbackISO) {
+    if (!fechaStr || typeof fechaStr !== 'string') return fallbackISO;
+    const limpia = fechaStr.trim().replace(/-00/g, '-01');
+    return /^\d{4}-\d{2}-\d{2}$/.test(limpia) ? limpia : fallbackISO;
+}
+
 function elegirMejorTrailer(videos) {
     if (!Array.isArray(videos) || videos.length === 0) return null;
     const prioridades = ['official trailer', 'launch trailer', 'announcement trailer', 'reveal trailer', 'trailer'];
@@ -55,7 +61,7 @@ function detectarTiendaGratis(textoPlataforma, tituloOriginal) {
     if (combinado.includes('humble')) return 'Humble Store';
     if (combinado.includes('playstation') || combinado.includes('ps4') || combinado.includes('ps5')) return 'PlayStation';
     if (combinado.includes('xbox')) return 'Xbox';
-    return 'Tienda Oficial';
+    return 'Free-to-Play Oficial';
 }
 
 function limpiarTituloGratis(titulo) {
@@ -142,7 +148,7 @@ function filtrarColumnasValidas(objeto, columnasTabla) {
 }
 
 async function ejecutarBot() {
-    console.log("🚀 Iniciando Mega-Bot v7.0 (IGDB + Steam ES + CheapShark + Radar Multi-Tienda Gratuitos)...");
+    console.log("🚀 Iniciando Mega-Bot v8.0 (IGDB + Steam ES + CheapShark + Giveaways + Free-to-Play)...");
     const igdbToken = await getIGDBToken();
     if (!igdbToken) return;
 
@@ -364,16 +370,28 @@ async function ejecutarBot() {
     }
 
     // =========================================================================
-    // FASE 4: RADAR GLOBAL DE JUEGOS GRATUITOS DE TODAS LAS TIENDAS
-    // (Epic Games Oficial + GamerPower Todas las Tiendas + CheapShark 100% Off)
+    // FASE 4: RADAR GLOBAL DE JUEGOS GRATUITOS Y FREE-TO-PLAY
+    // (Epic Oficial + GamerPower + CheapShark 100% + FreeToGame + Steam Top F2P)
     // =========================================================================
-    console.log("\n🎁 Rastreando juegos gratuitos activos en todas las tiendas...");
+    console.log("\n🎁 Rastreando regalos temporales y juegos Free-to-Play (Genshin, Aniimo, etc.)...");
     await supabase.from('game_prices').delete().eq('price', 0);
 
-    const gratuitosRegistrados = new Set(); // Evita duplicados "gameId::tienda"
+    const gratuitosRegistrados = new Set();
     let gratuitosActivos = 0;
 
-    async function registrarJuegoGratuito({ titulo, tienda, url, imagenFallback, resumenFallback, plataformas }) {
+    async function registrarJuegoGratuito({
+        titulo,
+        tienda,
+        url,
+        imagenFallback,
+        resumenFallback,
+        plataformas,
+        fechaLanzamiento,
+        desarrollador,
+        editor,
+        generos,
+        buscarEnIGDB = true
+    }) {
         const tituloLimpio = limpiarTituloGratis(titulo);
         const slug = crearSlug(tituloLimpio);
         if (!slug) return;
@@ -382,23 +400,29 @@ async function ejecutarBot() {
         let gameId = juegoExistente?.id;
 
         if (!gameId) {
-            const candidatosIGDB = await consultarIGDB(
-                igdbToken,
-                `search "${tituloLimpio.replace(/"/g, '')}"; fields ${campos}; limit 1;`
-            );
-            const infoIGDB = candidatosIGDB[0];
+            let infoIGDB = null;
+            if (buscarEnIGDB) {
+                const candidatosIGDB = await consultarIGDB(
+                    igdbToken,
+                    `search "${tituloLimpio.replace(/"/g, '')}"; fields ${campos}; limit 1;`
+                );
+                infoIGDB = candidatosIGDB[0] || null;
+                await esperar(220);
+            }
 
             const nuevoGratis = filtrarColumnasValidas({
                 title: infoIGDB?.name || tituloLimpio,
                 slug,
-                summary: resumenFallback || infoIGDB?.summary || 'Juego gratuito por tiempo limitado.',
-                release_date: formatearFecha(infoIGDB?.first_release_date) || hoyISO,
-                platform: plataformas || 'PC',
-                cover_image: infoIGDB ? elegirMejorImagen(infoIGDB) : (imagenFallback || FALLBACK_IMG),
+                summary: resumenFallback || infoIGDB?.summary || 'Juego gratuito disponible para descargar y jugar sin costo.',
+                release_date: sanitizarFechaISO(fechaLanzamiento || formatearFecha(infoIGDB?.first_release_date), hoyISO),
+                platform: plataformas || (infoIGDB?.platforms ? infoIGDB.platforms.map(p => p.name).join(', ') : 'PC'),
+                cover_image: (imagenFallback && !imagenFallback.includes('unsplash'))
+                    ? imagenFallback
+                    : (infoIGDB ? elegirMejorImagen(infoIGDB) : FALLBACK_IMG),
                 trailer_url: infoIGDB ? elegirMejorTrailer(infoIGDB.videos) : null,
-                developer: infoIGDB?.involved_companies?.find(c => c.developer)?.company?.name || 'Estudio Digital',
-                publisher: infoIGDB?.involved_companies?.find(c => c.publisher)?.company?.name || tienda,
-                genres: infoIGDB?.genres ? infoIGDB.genres.map(g => g.name).join(', ') : 'Gratuito'
+                developer: desarrollador || infoIGDB?.involved_companies?.find(c => c.developer)?.company?.name || 'Estudio Digital',
+                publisher: editor || infoIGDB?.involved_companies?.find(c => c.publisher)?.company?.name || tienda,
+                genres: generos || (infoIGDB?.genres ? infoIGDB.genres.map(g => g.name).join(', ') : 'Free-to-Play')
             }, columnasTabla);
 
             const { data: creado } = await supabase.from('games').insert(nuevoGratis).select().single();
@@ -406,7 +430,6 @@ async function ejecutarBot() {
                 mapaExistentes.set(slug, creado);
                 gameId = creado.id;
             }
-            await esperar(250);
         }
 
         if (!gameId) return;
@@ -425,11 +448,10 @@ async function ejecutarBot() {
         if (!error) {
             gratuitosRegistrados.add(llaveUnica);
             gratuitosActivos++;
-            console.log(`   🎁 [${tienda}] ${tituloLimpio}`);
         }
     }
 
-    // FUENTE A: API Oficial de Epic Games Store (en español)
+    // FUENTE A: API Oficial de Epic Games Store (regalos semanales en español)
     try {
         const resEpic = await fetch('https://store-site-backend-static.ak.epicgames.com/freeGamesPromotions?locale=es-ES&country=US&allowCountries=US');
         if (resEpic.ok) {
@@ -455,13 +477,14 @@ async function ejecutarBot() {
                     url: urlEpic,
                     imagenFallback: imgEpic,
                     resumenFallback: el.description,
-                    plataformas: 'PC (Epic Games Store)'
+                    plataformas: 'PC (Epic Games Store)',
+                    buscarEnIGDB: true
                 });
             }
         }
     } catch (e) {}
 
-    // FUENTE B: GamerPower (Steam, GOG, Prime Gaming, Epic, Ubisoft, Itch.io, IndieGala, PlayStation, Xbox)
+    // FUENTE B: GamerPower (regalos temporales en Steam, GOG, Prime Gaming, Epic, Ubisoft, Itch.io)
     try {
         const resGP = await fetch('https://www.gamerpower.com/api/giveaways?type=game');
         if (resGP.ok) {
@@ -478,14 +501,15 @@ async function ejecutarBot() {
                         url: item.open_giveaway_url || item.gamerpower_url,
                         imagenFallback: item.image || item.thumbnail,
                         resumenFallback: item.description,
-                        plataformas: item.platforms || 'PC'
+                        plataformas: item.platforms || 'PC',
+                        buscarEnIGDB: true
                     });
                 }
             }
         }
     } catch (e) {}
 
-    // FUENTE C: CheapShark 100% de descuento (Steam, GOG, Humble Store, Fanatical, GreenManGaming)
+    // FUENTE C: CheapShark 100% de descuento temporal
     try {
         const resCSFree = await fetch('https://www.cheapshark.com/api/1.0/deals?upperPrice=0&pageSize=60');
         if (resCSFree.ok) {
@@ -503,15 +527,64 @@ async function ejecutarBot() {
                         tienda: tiendaCS,
                         url: `https://www.cheapshark.com/redirect?dealID=${deal.dealID}`,
                         imagenFallback: imgCS,
-                        resumenFallback: null,
-                        plataformas: 'PC'
+                        plataformas: 'PC',
+                        buscarEnIGDB: false
                     });
                 }
             }
         }
     } catch (e) {}
 
-    console.log(`\n🎉 ¡Bot v7.0 completado! Ofertas en ${ofertasActualizadas} juegos | ${traduccionesSteam} fichas en español | ${gratuitosActivos} gratuitos activos.`);
+    // FUENTE D: Top 50 Free-to-Play más jugados en Steam (incluye Aniimo, CS2, Dota 2, Marvel Rivals, etc.)
+    try {
+        const resSteamF2P = await fetch('https://store.steampowered.com/search/results/?query=&maxprice=free&category1=998&filter=topsellers&json=1&count=50');
+        if (resSteamF2P.ok) {
+            const jsonSteam = await resSteamF2P.json();
+            const itemsSteam = Array.isArray(jsonSteam?.items) ? jsonSteam.items : [];
+
+            for (const item of itemsSteam) {
+                const matchApp = (item.logo || '').match(/\/apps\/(\d+)\//);
+                const appId = matchApp ? matchApp[1] : null;
+                if (!appId) continue;
+
+                await registrarJuegoGratuito({
+                    titulo: item.name,
+                    tienda: 'Steam',
+                    url: `https://store.steampowered.com/app/${appId}`,
+                    imagenFallback: `https://cdn.akamai.steamstatic.com/steam/apps/${appId}/library_600x900_2x.jpg`,
+                    plataformas: 'PC (Steam)',
+                    buscarEnIGDB: false
+                });
+            }
+        }
+    } catch (e) {}
+
+    // FUENTE E: FreeToGame API (Catálogo Free-to-Play: Genshin Impact, Fortnite, Warframe, Wuthering Waves, etc.)
+    try {
+        const resF2G = await fetch('https://www.freetogame.com/api/games?sort-by=popularity');
+        if (resF2G.ok) {
+            const listaF2G = await resF2G.json();
+            if (Array.isArray(listaF2G)) {
+                for (const f2g of listaF2G.slice(0, 120)) {
+                    await registrarJuegoGratuito({
+                        titulo: f2g.title,
+                        tienda: 'Free-to-Play Oficial',
+                        url: f2g.game_url,
+                        imagenFallback: f2g.thumbnail,
+                        resumenFallback: f2g.short_description,
+                        plataformas: f2g.platform || 'PC',
+                        fechaLanzamiento: f2g.release_date,
+                        desarrollador: f2g.developer,
+                        editor: f2g.publisher,
+                        generos: f2g.genre,
+                        buscarEnIGDB: false
+                    });
+                }
+            }
+        }
+    } catch (e) {}
+
+    console.log(`\n🎉 ¡Bot v8.0 completado! Ofertas en ${ofertasActualizadas} juegos | ${traduccionesSteam} fichas en español | ${gratuitosActivos} gratuitos y F2P activos.`);
 }
 
 ejecutarBot();
