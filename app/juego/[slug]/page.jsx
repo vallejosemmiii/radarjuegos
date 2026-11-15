@@ -1,9 +1,9 @@
-'use client';
-
-import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import ShareButtons from '../../components/ShareButtons';
+import SafeImage from '../../components/SafeImage';
+
+export const revalidate = 3600;
 
 const supabase = createClient(
   'https://iqndiyuhcjxrugzfyjaj.supabase.co',
@@ -43,42 +43,49 @@ const formatearFecha = (fechaString) => {
   });
 };
 
-export default function DetalleJuego() {
-  const params = useParams();
-  const slug = params?.slug;
-  const [game, setGame] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [copiado, setCopiado] = useState(false);
+export async function generateMetadata({ params }) {
+  const { slug } = await params;
+  const { data: game } = await supabase
+    .from('games')
+    .select('title, summary, cover_image, platform')
+    .ilike('slug', slug)
+    .single();
 
-  useEffect(() => {
-    if (!slug) return;
-    async function cargarJuego() {
-      const { data } = await supabase
-        .from('games')
-        .select('*, game_prices(*)')
-        .ilike('slug', slug)
-        .single();
-
-      if (data) setGame(data);
-      setLoading(false);
-    }
-    cargarJuego();
-  }, [slug]);
-
-  const copiarEnlace = () => {
-    const urlActual = `https://radarjuegos.lat/juego/${slug}`;
-    navigator.clipboard.writeText(urlActual);
-    setCopiado(true);
-    setTimeout(() => setCopiado(false), 2500);
-  };
-
-  if (loading) {
-    return (
-      <div style={{ textAlign: 'center', padding: '120px 20px', color: '#a855f7', fontSize: '1.2rem' }}>
-        Cargando ficha del juego...
-      </div>
-    );
+  if (!game) {
+    return { title: 'Juego no encontrado' };
   }
+
+  const descripcion = game.summary
+    ? game.summary.slice(0, 155)
+    : `Compara precios, ofertas y fecha de lanzamiento de ${game.title} en RadarJuegos.`;
+
+  return {
+    title: `${game.title} — Precio, Ofertas y Lanzamiento`,
+    description: descripcion,
+    openGraph: {
+      title: `${game.title} | RadarJuegos`,
+      description: descripcion,
+      url: `https://radarjuegos.lat/juego/${slug}`,
+      images: [game.cover_image || FALLBACK_IMG],
+      type: 'article',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `${game.title} | RadarJuegos`,
+      description: descripcion,
+      images: [game.cover_image || FALLBACK_IMG],
+    },
+  };
+}
+
+export default async function DetalleJuego({ params }) {
+  const { slug } = await params;
+
+  const { data: game } = await supabase
+    .from('games')
+    .select('*, game_prices(*)')
+    .ilike('slug', slug)
+    .single();
 
   if (!game) {
     return (
@@ -91,10 +98,22 @@ export default function DetalleJuego() {
     );
   }
 
+  // Buscar 4 juegos similares por género principal
+  let similares = [];
+  const primerGenero = game.genres ? game.genres.split(',')[0].trim() : null;
+  if (primerGenero && primerGenero !== 'No especificado') {
+    const { data: relData } = await supabase
+      .from('games')
+      .select('id, title, slug, cover_image, release_date, game_prices(price)')
+      .ilike('genres', `%${primerGenero}%`)
+      .neq('id', game.id)
+      .limit(4);
+    if (relData) similares = relData;
+  }
+
   const trailerEmbed = obtenerEmbedUrl(game.trailer_url);
   const precios = [...(game.game_prices || [])].sort((a, b) => Number(a.price) - Number(b.price));
-  const urlCompartir = encodeURIComponent(`https://radarjuegos.lat/juego/${game.slug}`);
-  const textoCompartir = encodeURIComponent(`Mira las ofertas y detalles de ${game.title} en RadarJuegos:`);
+  const urlCompleta = `https://radarjuegos.lat/juego/${game.slug}`;
 
   const detallesTecnicos = [
     { etiqueta: 'Lanzamiento', valor: formatearFecha(game.release_date) },
@@ -147,12 +166,9 @@ export default function DetalleJuego() {
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '40px', alignItems: 'flex-start' }}>
           {/* COLUMNA IZQUIERDA */}
           <div style={{ flex: '1 1 300px', maxWidth: '100%' }}>
-            <img
+            <SafeImage
               src={game.cover_image || FALLBACK_IMG}
               alt={game.title}
-              onError={(e) => {
-                e.currentTarget.src = FALLBACK_IMG;
-              }}
               style={{
                 width: '100%',
                 borderRadius: '12px',
@@ -197,11 +213,8 @@ export default function DetalleJuego() {
                           textDecoration: 'none',
                           color: estilo.textColor,
                           fontWeight: 'bold',
-                          transition: 'transform 0.2s',
                           boxShadow: '0 4px 10px rgba(0,0,0,0.3)',
                         }}
-                        onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.02)')}
-                        onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
                       >
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                           <span style={{ fontSize: '1.2rem' }}>{estilo.icon}</span>
@@ -234,30 +247,10 @@ export default function DetalleJuego() {
               <h4 style={{ margin: '0 0 12px 0', color: '#cbd5e1', fontSize: '0.9rem', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '1px' }}>
                 Compartir Ficha
               </h4>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <a
-                  href={`https://www.facebook.com/sharer/sharer.php?u=${urlCompartir}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ flex: 1, textAlign: 'center', backgroundColor: '#1877f2', color: '#fff', padding: '9px', borderRadius: '6px', textDecoration: 'none', fontWeight: 'bold', fontSize: '0.85rem' }}
-                >
-                  Facebook
-                </a>
-                <a
-                  href={`https://api.whatsapp.com/send?text=${textoCompartir}%20${urlCompartir}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ flex: 1, textAlign: 'center', backgroundColor: '#25d366', color: '#0f111a', padding: '9px', borderRadius: '6px', textDecoration: 'none', fontWeight: 'bold', fontSize: '0.85rem' }}
-                >
-                  WhatsApp
-                </a>
-                <button
-                  onClick={copiarEnlace}
-                  style={{ flex: 1, backgroundColor: '#1f293d', color: '#fff', border: '1px solid #334155', padding: '9px', borderRadius: '6px', fontWeight: 'bold', fontSize: '0.85rem', cursor: 'pointer' }}
-                >
-                  {copiado ? '✓ Copiado' : 'Copiar'}
-                </button>
-              </div>
+              <ShareButtons
+                url={urlCompleta}
+                texto={`Mira las ofertas y detalles de ${game.title} en RadarJuegos:`}
+              />
             </section>
 
             {/* FICHA TÉCNICA */}
@@ -356,6 +349,50 @@ export default function DetalleJuego() {
             </section>
           </div>
         </div>
+
+        {/* SECCIÓN DE JUEGOS SIMILARES */}
+        {similares.length > 0 && (
+          <section style={{ marginTop: '60px', paddingTop: '35px', borderTop: '1px solid #1f293d' }}>
+            <h2 style={{ fontSize: '1.4rem', color: '#fff', textTransform: 'uppercase', borderBottom: '3px solid #2dd4bf', display: 'inline-block', paddingBottom: '5px', marginBottom: '25px', letterSpacing: '1px' }}>
+              🎮 Juegos Similares ({primerGenero})
+            </h2>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '22px' }}>
+              {similares.map((rel) => {
+                const listaPrecios = rel.game_prices || [];
+                const minPrecio = listaPrecios.length > 0
+                  ? Math.min(...listaPrecios.map((p) => Number(p.price)))
+                  : null;
+                return (
+                  <Link href={`/juego/${rel.slug}`} key={rel.id} style={{ textDecoration: 'none' }}>
+                    <div style={{ backgroundColor: 'rgba(11, 13, 23, 0.9)', borderRadius: '12px', overflow: 'hidden', border: '1px solid #1f293d', display: 'flex', flexDirection: 'column', height: '100%' }}>
+                      <SafeImage
+                        src={rel.cover_image || FALLBACK_IMG}
+                        alt={rel.title}
+                        style={{ width: '100%', height: '165px', objectFit: 'cover' }}
+                      />
+                      <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
+                        <h3 style={{ margin: '0 0 10px 0', color: '#fff', fontSize: '1.02rem', lineHeight: '1.3' }}>
+                          {rel.title}
+                        </h3>
+                        <div style={{ marginTop: 'auto' }}>
+                          {minPrecio !== null ? (
+                            <span style={{ color: '#10b981', fontWeight: 'bold', fontSize: '1.05rem' }}>
+                              {minPrecio === 0 ? 'GRATIS' : `Desde $${minPrecio.toFixed(2)}`}
+                            </span>
+                          ) : (
+                            <span style={{ color: '#a855f7', fontSize: '0.85rem' }}>
+                              {formatearFecha(rel.release_date)}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </section>
+        )}
       </div>
     </article>
   );
