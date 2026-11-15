@@ -90,6 +90,9 @@ export default function Navbar() {
           <Link href="/" onClick={() => setMenuAbierto(false)} style={{ color: '#e2e8f0', textDecoration: 'none', fontWeight: 'bold', fontSize: '1rem', textTransform: 'uppercase', letterSpacing: '1px' }}>
             Inicio
           </Link>
+          <Link href="/noticias" onClick={() => setMenuAbierto(false)} style={{ color: '#e2e8f0', textDecoration: 'none', fontWeight: 'bold', fontSize: '1rem', textTransform: 'uppercase', letterSpacing: '1px' }}>
+            Noticias
+          </Link>
           <Link href="/proximos" onClick={() => setMenuAbierto(false)} style={{ color: '#e2e8f0', textDecoration: 'none', fontWeight: 'bold', fontSize: '1rem', textTransform: 'uppercase', letterSpacing: '1px' }}>
             Próximos
           </Link>
