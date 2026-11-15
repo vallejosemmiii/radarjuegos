@@ -16,6 +16,13 @@ const tiendas = {
     "25": "Epic Games", "27": "Gamesplanet", "35": "CDKeys"
 };
 
+const FUENTES_NOTICIAS = [
+    { nombre: '3DJuegos', url: 'https://www.3djuegos.com/feedburner.xml' },
+    { nombre: 'VidaExtra', url: 'https://www.vidaextra.com/feedburner.xml' },
+    { nombre: 'Vandal', url: 'https://vandal.elespanol.com/xml.cgi' },
+    { nombre: 'Eurogamer', url: 'https://www.eurogamer.es/feed/news' }
+];
+
 const esperar = (ms) => new Promise(r => setTimeout(r, ms));
 const formatearFecha = (ts) => ts ? new Date(ts * 1000).toISOString().split('T')[0] : null;
 const crearSlug = (nombre) => nombre.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
@@ -25,6 +32,77 @@ function sanitizarFechaISO(fechaStr, fallbackISO) {
     if (!fechaStr || typeof fechaStr !== 'string') return fallbackISO;
     const limpia = fechaStr.trim().replace(/-00/g, '-01');
     return /^\d{4}-\d{2}-\d{2}$/.test(limpia) ? limpia : fallbackISO;
+}
+
+function decodificarHTML(texto) {
+    if (!texto) return '';
+    return texto
+        .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/gi, '$1')
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&#039;|&apos;/g, "'")
+        .replace(/&nbsp;/g, ' ')
+        .replace(/&#(\d+);/g, (_, dec) => String.fromCharCode(dec))
+        .replace(/&#x([0-9a-f]+);/gi, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+        .trim();
+}
+
+function extraerTagXML(xml, tag) {
+    const regex = new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, 'i');
+    const match = xml.match(regex);
+    return match ? decodificarHTML(match[1]) : '';
+}
+
+function extraerImagenRSS(itemXml, htmlContenido) {
+    const patrones = [
+        /<media:content[^>]+url=["']([^"']+)["']/i,
+        /<enclosure[^>]+url=["']([^"']+)["']/i,
+        /<media:thumbnail[^>]+url=["']([^"']+)["']/i
+    ];
+    for (const regex of patrones) {
+        const m = itemXml.match(regex);
+        if (m && m[1] && !m[1].includes('feedburner')) return m[1];
+    }
+    const imgMatches = [...(htmlContenido || '').matchAll(/<img[^>]+src=["']([^"']+)["']/gi)];
+    for (const m of imgMatches) {
+        const src = m[1];
+        if (src && src.startsWith('http') && !src.includes('feedburner') && !src.includes('pixel') && !src.includes('1x1')) {
+            return src;
+        }
+    }
+    return FALLBACK_IMG;
+}
+
+function limpiarTextoNoticia(html) {
+    if (!html) return '';
+    return decodificarHTML(html)
+        .replace(/<\/p>/gi, '\n\n')
+        .replace(/<br\s*\/?>/gi, '\n')
+        .replace(/<[^>]*>?/gm, '')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+}
+
+function clasificarNoticia(titulo, texto) {
+    const combinado = `${titulo} ${texto}`.toLowerCase();
+    if (/\b(lanzamiento|fecha de salida|tráiler|trailer|anunciado|llega el|estreno|gameplay|nuevo juego)\b/.test(combinado)) {
+        return 'Lanzamientos';
+    }
+    if (/\b(steam|pc|epic games|tarjeta gráfica|nvidia|amd|rtx|valve|steam deck)\b/.test(combinado)) {
+        return 'PC / Steam';
+    }
+    if (/\b(ps5|ps4|playstation|sony|dualsense|ps plus)\b/.test(combinado)) {
+        return 'PlayStation';
+    }
+    if (/\b(xbox|game pass|microsoft|series x|series s)\b/.test(combinado)) {
+        return 'Xbox';
+    }
+    if (/\b(nintendo|switch|zelda|mario|pokémon|pokemon)\b/.test(combinado)) {
+        return 'Nintendo';
+    }
+    return 'Actualidad';
 }
 
 function elegirMejorTrailer(videos) {
@@ -148,7 +226,7 @@ function filtrarColumnasValidas(objeto, columnasTabla) {
 }
 
 async function ejecutarBot() {
-    console.log("🚀 Iniciando Mega-Bot v8.0 (IGDB + Steam ES + CheapShark + Giveaways + Free-to-Play)...");
+    console.log("🚀 Iniciando Mega-Bot v9.0 (Catálogo + Ofertas + Gratuitos + Noticias Gaming ES)...");
     const igdbToken = await getIGDBToken();
     if (!igdbToken) return;
 
@@ -371,26 +449,16 @@ async function ejecutarBot() {
 
     // =========================================================================
     // FASE 4: RADAR GLOBAL DE JUEGOS GRATUITOS Y FREE-TO-PLAY
-    // (Epic Oficial + GamerPower + CheapShark 100% + FreeToGame + Steam Top F2P)
     // =========================================================================
-    console.log("\n🎁 Rastreando regalos temporales y juegos Free-to-Play (Genshin, Aniimo, etc.)...");
+    console.log("\n🎁 Rastreando regalos temporales y juegos Free-to-Play...");
     await supabase.from('game_prices').delete().eq('price', 0);
 
     const gratuitosRegistrados = new Set();
     let gratuitosActivos = 0;
 
     async function registrarJuegoGratuito({
-        titulo,
-        tienda,
-        url,
-        imagenFallback,
-        resumenFallback,
-        plataformas,
-        fechaLanzamiento,
-        desarrollador,
-        editor,
-        generos,
-        buscarEnIGDB = true
+        titulo, tienda, url, imagenFallback, resumenFallback,
+        plataformas, fechaLanzamiento, desarrollador, editor, generos, buscarEnIGDB = true
     }) {
         const tituloLimpio = limpiarTituloGratis(titulo);
         const slug = crearSlug(tituloLimpio);
@@ -451,40 +519,27 @@ async function ejecutarBot() {
         }
     }
 
-    // FUENTE A: API Oficial de Epic Games Store (regalos semanales en español)
     try {
         const resEpic = await fetch('https://store-site-backend-static.ak.epicgames.com/freeGamesPromotions?locale=es-ES&country=US&allowCountries=US');
         if (resEpic.ok) {
             const jsonEpic = await resEpic.json();
             const elementos = jsonEpic?.data?.Catalog?.searchStore?.elements || [];
-
             for (const el of elementos) {
                 const promoActiva = el.promotions?.promotionalOffers?.[0]?.promotionalOffers?.[0];
                 const precioFinal = el.price?.totalPrice?.discountPrice;
                 if (!promoActiva || precioFinal !== 0) continue;
-
-                const imgEpic = el.keyImages?.find(i =>
-                    ['DieselStoreFrontWide', 'OfferImageWide', 'Thumbnail'].includes(i.type)
-                )?.url;
+                const imgEpic = el.keyImages?.find(i => ['DieselStoreFrontWide', 'OfferImageWide', 'Thumbnail'].includes(i.type))?.url;
                 const slugEpic = el.catalogNs?.mappings?.[0]?.pageSlug || el.productSlug || el.urlSlug;
-                const urlEpic = slugEpic
-                    ? `https://store.epicgames.com/es-ES/p/${slugEpic}`
-                    : 'https://store.epicgames.com/es-ES/free-games';
-
+                const urlEpic = slugEpic ? `https://store.epicgames.com/es-ES/p/${slugEpic}` : 'https://store.epicgames.com/es-ES/free-games';
                 await registrarJuegoGratuito({
-                    titulo: el.title,
-                    tienda: 'Epic Games',
-                    url: urlEpic,
-                    imagenFallback: imgEpic,
-                    resumenFallback: el.description,
-                    plataformas: 'PC (Epic Games Store)',
-                    buscarEnIGDB: true
+                    titulo: el.title, tienda: 'Epic Games', url: urlEpic,
+                    imagenFallback: imgEpic, resumenFallback: el.description,
+                    plataformas: 'PC (Epic Games Store)', buscarEnIGDB: true
                 });
             }
         }
     } catch (e) {}
 
-    // FUENTE B: GamerPower (regalos temporales en Steam, GOG, Prime Gaming, Epic, Ubisoft, Itch.io)
     try {
         const resGP = await fetch('https://www.gamerpower.com/api/giveaways?type=game');
         if (resGP.ok) {
@@ -493,23 +548,17 @@ async function ejecutarBot() {
                 for (const item of listaGP) {
                     if (item.status && item.status !== 'Active') continue;
                     if (/\b(dlc|expansion|soundtrack|pack|beta|demo|in-game|loot|skin|cosmetic|trial)\b/i.test(item.title)) continue;
-
-                    const tiendaDetectada = detectarTiendaGratis(item.platforms, item.title);
                     await registrarJuegoGratuito({
-                        titulo: item.title,
-                        tienda: tiendaDetectada,
+                        titulo: item.title, tienda: detectarTiendaGratis(item.platforms, item.title),
                         url: item.open_giveaway_url || item.gamerpower_url,
-                        imagenFallback: item.image || item.thumbnail,
-                        resumenFallback: item.description,
-                        plataformas: item.platforms || 'PC',
-                        buscarEnIGDB: true
+                        imagenFallback: item.image || item.thumbnail, resumenFallback: item.description,
+                        plataformas: item.platforms || 'PC', buscarEnIGDB: true
                     });
                 }
             }
         }
     } catch (e) {}
 
-    // FUENTE C: CheapShark 100% de descuento temporal
     try {
         const resCSFree = await fetch('https://www.cheapshark.com/api/1.0/deals?upperPrice=0&pageSize=60');
         if (resCSFree.ok) {
@@ -517,49 +566,34 @@ async function ejecutarBot() {
             if (Array.isArray(listaCS)) {
                 for (const deal of listaCS) {
                     if (parseFloat(deal.salePrice) !== 0) continue;
-                    const tiendaCS = tiendas[deal.storeID] || 'Tienda Digital';
-                    const imgCS = deal.steamAppID
-                        ? `https://cdn.akamai.steamstatic.com/steam/apps/${deal.steamAppID}/library_600x900_2x.jpg`
-                        : deal.thumb;
-
+                    const imgCS = deal.steamAppID ? `https://cdn.akamai.steamstatic.com/steam/apps/${deal.steamAppID}/library_600x900_2x.jpg` : deal.thumb;
                     await registrarJuegoGratuito({
-                        titulo: deal.title,
-                        tienda: tiendaCS,
+                        titulo: deal.title, tienda: tiendas[deal.storeID] || 'Tienda Digital',
                         url: `https://www.cheapshark.com/redirect?dealID=${deal.dealID}`,
-                        imagenFallback: imgCS,
-                        plataformas: 'PC',
-                        buscarEnIGDB: false
+                        imagenFallback: imgCS, plataformas: 'PC', buscarEnIGDB: false
                     });
                 }
             }
         }
     } catch (e) {}
 
-    // FUENTE D: Top 50 Free-to-Play más jugados en Steam (incluye Aniimo, CS2, Dota 2, Marvel Rivals, etc.)
     try {
         const resSteamF2P = await fetch('https://store.steampowered.com/search/results/?query=&maxprice=free&category1=998&filter=topsellers&json=1&count=50');
         if (resSteamF2P.ok) {
             const jsonSteam = await resSteamF2P.json();
-            const itemsSteam = Array.isArray(jsonSteam?.items) ? jsonSteam.items : [];
-
-            for (const item of itemsSteam) {
+            for (const item of (jsonSteam?.items || [])) {
                 const matchApp = (item.logo || '').match(/\/apps\/(\d+)\//);
                 const appId = matchApp ? matchApp[1] : null;
                 if (!appId) continue;
-
                 await registrarJuegoGratuito({
-                    titulo: item.name,
-                    tienda: 'Steam',
-                    url: `https://store.steampowered.com/app/${appId}`,
+                    titulo: item.name, tienda: 'Steam', url: `https://store.steampowered.com/app/${appId}`,
                     imagenFallback: `https://cdn.akamai.steamstatic.com/steam/apps/${appId}/library_600x900_2x.jpg`,
-                    plataformas: 'PC (Steam)',
-                    buscarEnIGDB: false
+                    plataformas: 'PC (Steam)', buscarEnIGDB: false
                 });
             }
         }
     } catch (e) {}
 
-    // FUENTE E: FreeToGame API (Catálogo Free-to-Play: Genshin Impact, Fortnite, Warframe, Wuthering Waves, etc.)
     try {
         const resF2G = await fetch('https://www.freetogame.com/api/games?sort-by=popularity');
         if (resF2G.ok) {
@@ -567,24 +601,98 @@ async function ejecutarBot() {
             if (Array.isArray(listaF2G)) {
                 for (const f2g of listaF2G.slice(0, 120)) {
                     await registrarJuegoGratuito({
-                        titulo: f2g.title,
-                        tienda: 'Free-to-Play Oficial',
-                        url: f2g.game_url,
-                        imagenFallback: f2g.thumbnail,
-                        resumenFallback: f2g.short_description,
-                        plataformas: f2g.platform || 'PC',
-                        fechaLanzamiento: f2g.release_date,
-                        desarrollador: f2g.developer,
-                        editor: f2g.publisher,
-                        generos: f2g.genre,
-                        buscarEnIGDB: false
+                        titulo: f2g.title, tienda: 'Free-to-Play Oficial', url: f2g.game_url,
+                        imagenFallback: f2g.thumbnail, resumenFallback: f2g.short_description,
+                        plataformas: f2g.platform || 'PC', fechaLanzamiento: f2g.release_date,
+                        desarrollador: f2g.developer, editor: f2g.publisher,
+                        generos: f2g.genre, buscarEnIGDB: false
                     });
                 }
             }
         }
     } catch (e) {}
 
-    console.log(`\n🎉 ¡Bot v8.0 completado! Ofertas en ${ofertasActualizadas} juegos | ${traduccionesSteam} fichas en español | ${gratuitosActivos} gratuitos y F2P activos.`);
+    // =========================================================================
+    // FASE 5: RADAR DE NOTICIAS GAMING EN ESPAÑOL
+    // =========================================================================
+    console.log("\n📰 Actualizando sector de Noticias Gaming...");
+    let noticiasNuevas = 0;
+
+    const { data: noticiasPrevias, error: errTablaNoticias } = await supabase
+        .from('noticias')
+        .select('slug');
+
+    if (errTablaNoticias) {
+        console.log("⚠️ Tabla 'noticias' no encontrada aún en Supabase:", errTablaNoticias.message);
+    } else {
+        const slugsNoticias = new Set((noticiasPrevias || []).map(n => n.slug));
+
+        for (const fuente of FUENTES_NOTICIAS) {
+            try {
+                const resRSS = await fetch(fuente.url, {
+                    headers: { 'User-Agent': 'Mozilla/5.0 (compatible; RadarJuegosBot/1.0)' }
+                });
+                if (!resRSS.ok) continue;
+                const xmlText = await resRSS.text();
+                const items = xmlText.match(/<item[\s\S]*?<\/item>/gi) || [];
+
+                for (const itemXml of items.slice(0, 15)) {
+                    const titulo = extraerTagXML(itemXml, 'title');
+                    const link = extraerTagXML(itemXml, 'link');
+                    const pubDateRaw = extraerTagXML(itemXml, 'pubDate');
+                    const rawDesc = itemXml.match(/<description[^>]*>([\s\S]*?)<\/description>/i)?.[1] || '';
+                    const rawContent = itemXml.match(/<content:encoded[^>]*>([\s\S]*?)<\/content:encoded>/i)?.[1] || rawDesc;
+
+                    if (!titulo || !link) continue;
+                    const slug = crearSlug(titulo).slice(0, 110);
+                    if (!slug || slugsNoticias.has(slug)) continue;
+
+                    const imagen = extraerImagenRSS(itemXml, rawContent || rawDesc);
+                    const textoCompleto = limpiarTextoNoticia(rawContent || rawDesc);
+                    if (textoCompleto.length < 40) continue;
+
+                    const resumenCorto = textoCompleto.length > 220
+                        ? `${textoCompleto.slice(0, 217).trim()}...`
+                        : textoCompleto;
+
+                    const fechaISO = pubDateRaw && !isNaN(Date.parse(pubDateRaw))
+                        ? new Date(pubDateRaw).toISOString()
+                        : new Date().toISOString();
+
+                    const { error: errInsert } = await supabase.from('noticias').insert({
+                        title: titulo,
+                        slug,
+                        summary: resumenCorto,
+                        content: textoCompleto,
+                        cover_image: imagen,
+                        source_name: fuente.nombre,
+                        source_url: link,
+                        category: clasificarNoticia(titulo, textoCompleto),
+                        published_at: fechaISO
+                    });
+
+                    if (!errInsert) {
+                        slugsNoticias.add(slug);
+                        noticiasNuevas++;
+                    }
+                }
+            } catch (e) {}
+            await esperar(300);
+        }
+
+        // Mantener solo las 150 noticias más recientes para optimizar la base de datos
+        const { data: antiguas } = await supabase
+            .from('noticias')
+            .select('id')
+            .order('published_at', { ascending: false })
+            .range(150, 500);
+
+        if (antiguas && antiguas.length > 0) {
+            await supabase.from('noticias').delete().in('id', antiguas.map(a => a.id));
+        }
+    }
+
+    console.log(`\n🎉 ¡Bot v9.0 completado! Ofertas: ${ofertasActualizadas} | Español: ${traduccionesSteam} | Gratuitos/F2P: ${gratuitosActivos} | Noticias nuevas: +${noticiasNuevas}`);
 }
 
 ejecutarBot();
