@@ -117,6 +117,38 @@ export default async function DetalleJuego({ params }) {
   const precios = [...(game.game_prices || [])].sort((a, b) => Number(a.price) - Number(b.price));
   const urlCompleta = `https://radarjuegos.lat/juego/${game.slug}`;
 
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'VideoGame',
+    name: game.title,
+    description: game.summary || `Compara precios, ofertas y lanzamiento de ${game.title}.`,
+    image: game.cover_image || FALLBACK_IMG,
+    url: urlCompleta,
+    ...(game.release_date && { datePublished: game.release_date.split('T')[0] }),
+    ...(game.genres && game.genres !== 'No especificado' && {
+      genre: game.genres.split(',').map((g) => g.trim()),
+    }),
+    ...(game.platform && {
+      gamePlatform: game.platform.split(',').map((p) => p.trim()),
+    }),
+    ...(game.developer && game.developer !== 'No especificado' && {
+      author: { '@type': 'Organization', name: game.developer },
+    }),
+    ...(game.publisher && game.publisher !== 'No especificado' && {
+      publisher: { '@type': 'Organization', name: game.publisher },
+    }),
+    ...(precios.length > 0 && {
+      offers: precios.map((p) => ({
+        '@type': 'Offer',
+        price: Number(p.price).toFixed(2),
+        priceCurrency: p.currency || 'USD',
+        availability: 'https://schema.org/InStock',
+        url: p.affiliate_url || urlCompleta,
+        seller: { '@type': 'Organization', name: p.store_name },
+      })),
+    }),
+  };
+
   const detallesTecnicos = [
     { etiqueta: 'Lanzamiento', valor: formatearFecha(game.release_date) },
     { etiqueta: 'Desarrollador', valor: game.developer },
@@ -129,6 +161,11 @@ export default async function DetalleJuego({ params }) {
 
   return (
     <article style={{ position: 'relative', minHeight: '100vh', overflow: 'hidden' }}>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+
       {/* FONDO DIFUMINADO */}
       <div
         style={{
