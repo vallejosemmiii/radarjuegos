@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import Link from 'next/link';
 import ShareButtons from '../../components/ShareButtons';
 import SafeImage from '../../components/SafeImage';
+import StoreLogo from '../../components/StoreLogo';
 
 export const revalidate = 3600;
 
@@ -15,16 +16,18 @@ const FALLBACK_IMG = 'https://images.unsplash.com/photo-1542751371-adc38448a05e?
 
 const obtenerEstiloTienda = (nombreTienda) => {
   const nombre = (nombreTienda || '').toLowerCase();
-  if (nombre.includes('steam')) return { bg: '#1b2838', icon: '💨', textColor: '#fff' };
-  if (nombre.includes('epic')) return { bg: '#2a2a2a', icon: '🎮', textColor: '#fff' };
-  if (nombre.includes('gog')) return { bg: '#4c1d95', icon: '🌌', textColor: '#fff' };
-  if (nombre.includes('humble')) return { bg: '#991b1b', icon: '❤️', textColor: '#fff' };
-  if (nombre.includes('greenman')) return { bg: '#15803d', icon: '🟢', textColor: '#fff' };
-  if (nombre.includes('fanatical')) return { bg: '#c2410c', icon: '🔥', textColor: '#fff' };
-  if (nombre.includes('free-to-play')) return { bg: '#047857', icon: '🎁', textColor: '#fff' };
-  if (nombre.includes('playstation') || nombre.includes('psn')) return { bg: '#00439c', icon: '🔵', textColor: '#fff' };
-  if (nombre.includes('xbox')) return { bg: '#107c10', icon: '🟢', textColor: '#fff' };
-  return { bg: '#a855f7', icon: '🛒', textColor: '#fff' };
+  if (nombre.includes('steam')) return { bg: '#1b2838', border: '#2a475e', textColor: '#fff' };
+  if (nombre.includes('epic')) return { bg: '#202024', border: '#3f3f46', textColor: '#fff' };
+  if (nombre.includes('gog')) return { bg: '#4c1d95', border: '#7c3aed', textColor: '#fff' };
+  if (nombre.includes('humble')) return { bg: '#991b1b', border: '#dc2626', textColor: '#fff' };
+  if (nombre.includes('greenman')) return { bg: '#15803d', border: '#22c55e', textColor: '#fff' };
+  if (nombre.includes('fanatical')) return { bg: '#c2410c', border: '#f97316', textColor: '#fff' };
+  if (nombre.includes('prime') || nombre.includes('amazon')) return { bg: '#0369a1', border: '#0ea5e9', textColor: '#fff' };
+  if (nombre.includes('ubisoft') || nombre.includes('uplay')) return { bg: '#1d4ed8', border: '#3b82f6', textColor: '#fff' };
+  if (nombre.includes('free-to-play')) return { bg: '#047857', border: '#10b981', textColor: '#fff' };
+  if (nombre.includes('playstation') || nombre.includes('psn')) return { bg: '#00439c', border: '#2563eb', textColor: '#fff' };
+  if (nombre.includes('xbox')) return { bg: '#107c10', border: '#22c55e', textColor: '#fff' };
+  return { bg: '#6d28d9', border: '#a855f7', textColor: '#fff' };
 };
 
 const obtenerEmbedUrl = (url) => {
@@ -98,7 +101,6 @@ export default async function DetalleJuego({ params }) {
     );
   }
 
-  // Buscar 4 juegos similares por género principal
   let similares = [];
   const primerGenero = game.genres ? game.genres.split(',')[0].trim() : null;
   if (primerGenero && primerGenero !== 'No especificado') {
@@ -178,7 +180,7 @@ export default async function DetalleJuego({ params }) {
               }}
             />
 
-            {/* COMPARADOR DE PRECIOS */}
+            {/* COMPARADOR DE PRECIOS CON LOGOS DE TIENDAS */}
             <section
               style={{
                 backgroundColor: 'rgba(11, 13, 23, 0.85)',
@@ -208,7 +210,8 @@ export default async function DetalleJuego({ params }) {
                           justifyContent: 'space-between',
                           alignItems: 'center',
                           backgroundColor: estilo.bg,
-                          padding: '12px 15px',
+                          border: `1px solid ${estilo.border}`,
+                          padding: '10px 14px',
                           borderRadius: '8px',
                           textDecoration: 'none',
                           color: estilo.textColor,
@@ -216,11 +219,24 @@ export default async function DetalleJuego({ params }) {
                           boxShadow: '0 4px 10px rgba(0,0,0,0.3)',
                         }}
                       >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <span style={{ fontSize: '1.2rem' }}>{estilo.icon}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '11px' }}>
+                          <span
+                            style={{
+                              width: '32px',
+                              height: '32px',
+                              borderRadius: '6px',
+                              backgroundColor: 'rgba(255, 255, 255, 0.12)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              flexShrink: 0,
+                            }}
+                          >
+                            <StoreLogo storeName={precio.store_name} size={19} />
+                          </span>
                           <span>{precio.store_name}</span>
                         </div>
-                        <span style={{ backgroundColor: 'rgba(0,0,0,0.45)', padding: '4px 10px', borderRadius: '4px', color: '#10b981' }}>
+                        <span style={{ backgroundColor: 'rgba(0,0,0,0.45)', padding: '5px 10px', borderRadius: '5px', color: '#10b981', fontSize: '0.95rem' }}>
                           {esGratis ? 'GRATIS' : `$${Number(precio.price).toFixed(2)}`}
                         </span>
                       </a>
