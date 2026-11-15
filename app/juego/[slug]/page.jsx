@@ -21,6 +21,7 @@ const obtenerEstiloTienda = (nombreTienda) => {
   if (nombre.includes('humble')) return { bg: '#991b1b', icon: '❤️', textColor: '#fff' };
   if (nombre.includes('greenman')) return { bg: '#15803d', icon: '🟢', textColor: '#fff' };
   if (nombre.includes('fanatical')) return { bg: '#c2410c', icon: '🔥', textColor: '#fff' };
+  if (nombre.includes('free-to-play')) return { bg: '#047857', icon: '🎁', textColor: '#fff' };
   if (nombre.includes('playstation') || nombre.includes('psn')) return { bg: '#00439c', icon: '🔵', textColor: '#fff' };
   if (nombre.includes('xbox')) return { bg: '#107c10', icon: '🟢', textColor: '#fff' };
   return { bg: '#a855f7', icon: '🛒', textColor: '#fff' };
@@ -47,6 +48,7 @@ export default function DetalleJuego() {
   const slug = params?.slug;
   const [game, setGame] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [copiado, setCopiado] = useState(false);
 
   useEffect(() => {
     if (!slug) return;
@@ -62,6 +64,13 @@ export default function DetalleJuego() {
     }
     cargarJuego();
   }, [slug]);
+
+  const copiarEnlace = () => {
+    const urlActual = `https://radarjuegos.lat/juego/${slug}`;
+    navigator.clipboard.writeText(urlActual);
+    setCopiado(true);
+    setTimeout(() => setCopiado(false), 2500);
+  };
 
   if (loading) {
     return (
@@ -84,6 +93,8 @@ export default function DetalleJuego() {
 
   const trailerEmbed = obtenerEmbedUrl(game.trailer_url);
   const precios = [...(game.game_prices || [])].sort((a, b) => Number(a.price) - Number(b.price));
+  const urlCompartir = encodeURIComponent(`https://radarjuegos.lat/juego/${game.slug}`);
+  const textoCompartir = encodeURIComponent(`Mira las ofertas y detalles de ${game.title} en RadarJuegos:`);
 
   const detallesTecnicos = [
     { etiqueta: 'Lanzamiento', valor: formatearFecha(game.release_date) },
@@ -96,7 +107,7 @@ export default function DetalleJuego() {
   ].filter((item) => item.valor && item.valor !== 'No especificado');
 
   return (
-    <div style={{ position: 'relative', minHeight: '100vh', overflow: 'hidden' }}>
+    <article style={{ position: 'relative', minHeight: '100vh', overflow: 'hidden' }}>
       {/* FONDO DIFUMINADO */}
       <div
         style={{
@@ -115,7 +126,6 @@ export default function DetalleJuego() {
         }}
       />
 
-      {/* CONTENIDO PRINCIPAL */}
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '35px 20px', color: '#e2e8f0', position: 'relative', zIndex: 1 }}>
         <div style={{ marginBottom: '25px' }}>
           <Link
@@ -135,7 +145,7 @@ export default function DetalleJuego() {
         </div>
 
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '40px', alignItems: 'flex-start' }}>
-          {/* COLUMNA IZQUIERDA: CARÁTULA, PRECIOS Y FICHA TÉCNICA */}
+          {/* COLUMNA IZQUIERDA */}
           <div style={{ flex: '1 1 300px', maxWidth: '100%' }}>
             <img
               src={game.cover_image || FALLBACK_IMG}
@@ -153,7 +163,7 @@ export default function DetalleJuego() {
             />
 
             {/* COMPARADOR DE PRECIOS */}
-            <div
+            <section
               style={{
                 backgroundColor: 'rgba(11, 13, 23, 0.85)',
                 padding: '20px',
@@ -164,12 +174,13 @@ export default function DetalleJuego() {
               }}
             >
               <h3 style={{ margin: '0 0 18px 0', color: '#2dd4bf', textAlign: 'center', fontSize: '1.2rem' }}>
-                💰 Comparar Precios
+                💰 Dónde Conseguirlo
               </h3>
               {precios.length > 0 ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   {precios.map((precio) => {
                     const estilo = obtenerEstiloTienda(precio.store_name);
+                    const esGratis = Number(precio.price) === 0;
                     return (
                       <a
                         key={precio.id}
@@ -197,7 +208,7 @@ export default function DetalleJuego() {
                           <span>{precio.store_name}</span>
                         </div>
                         <span style={{ backgroundColor: 'rgba(0,0,0,0.45)', padding: '4px 10px', borderRadius: '4px', color: '#10b981' }}>
-                          ${Number(precio.price).toFixed(2)}
+                          {esGratis ? 'GRATIS' : `$${Number(precio.price).toFixed(2)}`}
                         </span>
                       </a>
                     );
@@ -208,11 +219,50 @@ export default function DetalleJuego() {
                   Aún no hay ofertas digitales disponibles para este título.
                 </p>
               )}
-            </div>
+            </section>
+
+            {/* COMPARTIR EN REDES */}
+            <section
+              style={{
+                backgroundColor: 'rgba(11, 13, 23, 0.85)',
+                padding: '18px',
+                borderRadius: '12px',
+                border: '1px solid #1f293d',
+                marginBottom: '25px',
+              }}
+            >
+              <h4 style={{ margin: '0 0 12px 0', color: '#cbd5e1', fontSize: '0.9rem', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                Compartir Ficha
+              </h4>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <a
+                  href={`https://www.facebook.com/sharer/sharer.php?u=${urlCompartir}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ flex: 1, textAlign: 'center', backgroundColor: '#1877f2', color: '#fff', padding: '9px', borderRadius: '6px', textDecoration: 'none', fontWeight: 'bold', fontSize: '0.85rem' }}
+                >
+                  Facebook
+                </a>
+                <a
+                  href={`https://api.whatsapp.com/send?text=${textoCompartir}%20${urlCompartir}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ flex: 1, textAlign: 'center', backgroundColor: '#25d366', color: '#0f111a', padding: '9px', borderRadius: '6px', textDecoration: 'none', fontWeight: 'bold', fontSize: '0.85rem' }}
+                >
+                  WhatsApp
+                </a>
+                <button
+                  onClick={copiarEnlace}
+                  style={{ flex: 1, backgroundColor: '#1f293d', color: '#fff', border: '1px solid #334155', padding: '9px', borderRadius: '6px', fontWeight: 'bold', fontSize: '0.85rem', cursor: 'pointer' }}
+                >
+                  {copiado ? '✓ Copiado' : 'Copiar'}
+                </button>
+              </div>
+            </section>
 
             {/* FICHA TÉCNICA */}
             {detallesTecnicos.length > 0 && (
-              <div
+              <section
                 style={{
                   backgroundColor: 'rgba(11, 13, 23, 0.85)',
                   padding: '20px',
@@ -236,11 +286,11 @@ export default function DetalleJuego() {
                     </div>
                   ))}
                 </div>
-              </div>
+              </section>
             )}
           </div>
 
-          {/* COLUMNA DERECHA: TÍTULO, TRÁILER Y SINOPSIS */}
+          {/* COLUMNA DERECHA */}
           <div style={{ flex: '2 1 550px', minWidth: '0' }}>
             <h1 style={{ fontSize: 'clamp(2rem, 4vw, 3.2rem)', color: '#fff', margin: '0 0 12px 0', textShadow: '2px 2px 4px rgba(0,0,0,0.8)', lineHeight: '1.15' }}>
               {game.title}
@@ -288,7 +338,7 @@ export default function DetalleJuego() {
               </div>
             )}
 
-            <div
+            <section
               style={{
                 backgroundColor: 'rgba(11, 13, 23, 0.8)',
                 padding: '28px',
@@ -303,10 +353,10 @@ export default function DetalleJuego() {
               <p style={{ color: '#cbd5e1', lineHeight: '1.8', fontSize: '1.05rem', margin: 0, whiteSpace: 'pre-line' }}>
                 {game.summary || 'Sin descripción disponible en este momento.'}
               </p>
-            </div>
+            </section>
           </div>
         </div>
       </div>
-    </div>
+    </article>
   );
 }
