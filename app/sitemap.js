@@ -9,9 +9,7 @@ const supabase = createClient(
 export default async function sitemap() {
   const baseUrl = 'https://radarjuegos.lat';
 
-  const { data: games } = await supabase
-    .from('games')
-    .select('slug');
+  const { data: games } = await supabase.from('games').select('slug');
 
   const paginasJuegos = (games || []).map((game) => ({
     url: `${baseUrl}/juego/${game.slug}`,
@@ -24,6 +22,8 @@ export default async function sitemap() {
     { url: baseUrl, lastModified: new Date(), changeFrequency: 'daily', priority: 1.0 },
     { url: `${baseUrl}/proximos`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.9 },
     { url: `${baseUrl}/ofertas`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.9 },
+    { url: `${baseUrl}/gratuitos`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.9 },
+    { url: `${baseUrl}/nosotros`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.5 },
     { url: `${baseUrl}/privacidad`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.3 },
     { url: `${baseUrl}/terminos`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.3 },
     { url: `${baseUrl}/contacto`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.4 },
