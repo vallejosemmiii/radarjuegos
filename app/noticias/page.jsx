@@ -25,6 +25,7 @@ export default function Noticias() {
   const [noticias, setNoticias] = useState([]);
   const [categoriaFiltro, setCategoriaFiltro] = useState('Todas');
   const [busqueda, setBusqueda] = useState('');
+  const [cantidadVisible, setCantidadVisible] = useState(24);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -33,7 +34,7 @@ export default function Noticias() {
         .from('noticias')
         .select('*')
         .order('published_at', { ascending: false })
-        .limit(90);
+        .limit(150);
 
       if (data) setNoticias(data);
       setLoading(false);
@@ -54,6 +55,8 @@ export default function Noticias() {
 
   const destacada = !busqueda && categoriaFiltro === 'Todas' && filtradas.length > 0 ? filtradas[0] : null;
   const restoNoticias = destacada ? filtradas.slice(1) : filtradas;
+  const visibles = restoNoticias.slice(0, cantidadVisible);
+  const restantes = restoNoticias.length - visibles.length;
 
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '40px 20px', color: '#e2e8f0' }}>
@@ -71,7 +74,10 @@ export default function Noticias() {
         {categorias.map((cat) => (
           <button
             key={cat}
-            onClick={() => setCategoriaFiltro(cat)}
+            onClick={() => {
+              setCategoriaFiltro(cat);
+              setCantidadVisible(24);
+            }}
             style={{
               padding: '9px 16px',
               borderRadius: '8px',
@@ -92,7 +98,10 @@ export default function Noticias() {
         type="text"
         placeholder="🔍 Buscar noticias (Ej: GTA VI, Steam, PlayStation, Fable)..."
         value={busqueda}
-        onChange={(e) => setBusqueda(e.target.value)}
+        onChange={(e) => {
+          setBusqueda(e.target.value);
+          setCantidadVisible(24);
+        }}
         style={{
           width: '100%',
           padding: '15px 22px',
@@ -166,7 +175,7 @@ export default function Noticias() {
 
           {/* CUADRÍCULA DE NOTICIAS */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(310px, 1fr))', gap: '25px' }}>
-            {restoNoticias.map((item) => (
+            {visibles.map((item) => (
               <Link href={`/noticias/${item.slug}`} key={item.id} style={{ textDecoration: 'none' }}>
                 <article
                   style={{
@@ -233,6 +242,26 @@ export default function Noticias() {
               </Link>
             ))}
           </div>
+
+          {restantes > 0 && (
+            <div style={{ textAlign: 'center', marginTop: '40px' }}>
+              <button
+                onClick={() => setCantidadVisible((prev) => prev + 24)}
+                style={{
+                  backgroundColor: '#16192b',
+                  color: '#a855f7',
+                  border: '2px solid #a855f7',
+                  padding: '14px 32px',
+                  borderRadius: '10px',
+                  fontSize: '1rem',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                }}
+              >
+                Cargar más noticias ({restantes} restantes)
+              </button>
+            </div>
+          )}
         </>
       )}
     </div>
