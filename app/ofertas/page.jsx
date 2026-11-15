@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import Link from 'next/link';
+import StoreLogo from '../components/StoreLogo';
 
 const supabase = createClient(
   'https://iqndiyuhcjxrugzfyjaj.supabase.co',
@@ -15,14 +16,14 @@ const FALLBACK_IMG = 'https://images.unsplash.com/photo-1542751371-adc38448a05e?
 export default function Ofertas() {
   const [games, setGames] = useState([]);
   const [busqueda, setBusqueda] = useState('');
-  const [orden, setOrden] = useState('precio'); // 'precio' | 'baratos15'
+  const [orden, setOrden] = useState('precio');
+  const [cantidadVisible, setCantidadVisible] = useState(24);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function cargarDatos() {
       const { data } = await supabase.from('games').select('*, game_prices(*)');
       if (data) {
-        // Filtrar solo juegos que tengan precios activos
         const soloConOfertas = data
           .filter((game) => Array.isArray(game.game_prices) && game.game_prices.length > 0)
           .map((game) => {
@@ -33,7 +34,8 @@ export default function Ofertas() {
               tiendaTop: preciosOrdenados[0].store_name,
               cantidadTiendas: preciosOrdenados.length,
             };
-          });
+          })
+          .filter((game) => game.mejorPrecioNum > 0);
         setGames(soloConOfertas);
       }
       setLoading(false);
@@ -49,6 +51,9 @@ export default function Ofertas() {
     })
     .sort((a, b) => a.mejorPrecioNum - b.mejorPrecioNum);
 
+  const visibles = filtrados.slice(0, cantidadVisible);
+  const restantes = filtrados.length - visibles.length;
+
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '40px 20px', color: '#e2e8f0' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px', marginBottom: '30px' }}>
@@ -58,7 +63,10 @@ export default function Ofertas() {
 
         <div style={{ display: 'flex', gap: '10px' }}>
           <button
-            onClick={() => setOrden('precio')}
+            onClick={() => {
+              setOrden('precio');
+              setCantidadVisible(24);
+            }}
             style={{
               padding: '10px 18px',
               borderRadius: '8px',
@@ -72,7 +80,10 @@ export default function Ofertas() {
             Todas las Ofertas
           </button>
           <button
-            onClick={() => setOrden('baratos15')}
+            onClick={() => {
+              setOrden('baratos15');
+              setCantidadVisible(24);
+            }}
             style={{
               padding: '10px 18px',
               borderRadius: '8px',
@@ -92,7 +103,10 @@ export default function Ofertas() {
         type="text"
         placeholder="🔍 Buscar juego en oferta..."
         value={busqueda}
-        onChange={(e) => setBusqueda(e.target.value)}
+        onChange={(e) => {
+          setBusqueda(e.target.value);
+          setCantidadVisible(24);
+        }}
         style={{
           width: '100%',
           padding: '16px 22px',
@@ -113,58 +127,84 @@ export default function Ofertas() {
           No se encontraron ofertas con ese filtro.
         </p>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(270px, 1fr))', gap: '25px' }}>
-          {filtrados.map((game) => (
-            <Link href={`/juego/${game.slug}`} key={game.id} style={{ textDecoration: 'none' }}>
-              <div
-                style={{
-                  backgroundColor: '#0b0d17',
-                  borderRadius: '12px',
-                  overflow: 'hidden',
-                  border: '1px solid #1f293d',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  height: '100%',
-                  transition: 'transform 0.3s, border-color 0.3s',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-6px)';
-                  e.currentTarget.style.borderColor = '#2dd4bf';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.borderColor = '#1f293d';
-                }}
-              >
-                <img
-                  src={game.cover_image || FALLBACK_IMG}
-                  alt={game.title}
-                  style={{ width: '100%', height: '185px', objectFit: 'cover' }}
-                  onError={(e) => {
-                    e.currentTarget.src = FALLBACK_IMG;
+        <>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(270px, 1fr))', gap: '25px' }}>
+            {visibles.map((game) => (
+              <Link href={`/juego/${game.slug}`} key={game.id} style={{ textDecoration: 'none' }}>
+                <div
+                  style={{
+                    backgroundColor: '#0b0d17',
+                    borderRadius: '12px',
+                    overflow: 'hidden',
+                    border: '1px solid #1f293d',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    height: '100%',
+                    transition: 'transform 0.3s, border-color 0.3s',
                   }}
-                />
-                <div style={{ padding: '18px', display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
-                  <h3 style={{ margin: '0 0 12px 0', color: '#fff', fontSize: '1.1rem' }}>{game.title}</h3>
-                  <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div>
-                      <span style={{ fontSize: '0.78rem', color: '#94a3b8', display: 'block' }}>
-                        {game.tiendaTop} ({game.cantidadTiendas} {game.cantidadTiendas === 1 ? 'tienda' : 'tiendas'})
-                      </span>
-                      <span style={{ color: '#10b981', fontWeight: 'bold', fontSize: '1.25rem' }}>
-                        ${game.mejorPrecioNum.toFixed(2)}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-6px)';
+                    e.currentTarget.style.borderColor = '#2dd4bf';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.borderColor = '#1f293d';
+                  }}
+                >
+                  <img
+                    src={game.cover_image || FALLBACK_IMG}
+                    alt={game.title}
+                    style={{ width: '100%', height: '185px', objectFit: 'cover' }}
+                    onError={(e) => {
+                      e.currentTarget.src = FALLBACK_IMG;
+                    }}
+                  />
+                  <div style={{ padding: '18px', display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
+                    <h3 style={{ margin: '0 0 12px 0', color: '#fff', fontSize: '1.1rem' }}>{game.title}</h3>
+                    <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <span style={{ fontSize: '0.78rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '2px' }}>
+                          <StoreLogo storeName={game.tiendaTop} size={13} />
+                          <span>
+                            {game.tiendaTop} ({game.cantidadTiendas} {game.cantidadTiendas === 1 ? 'tienda' : 'tiendas'})
+                          </span>
+                        </span>
+                        <span style={{ color: '#10b981', fontWeight: 'bold', fontSize: '1.25rem' }}>
+                          ${game.mejorPrecioNum.toFixed(2)}
+                        </span>
+                      </div>
+                      <span style={{ backgroundColor: '#a855f7', color: '#fff', padding: '8px 14px', borderRadius: '6px', fontSize: '0.82rem', fontWeight: 'bold' }}>
+                        Comparar
                       </span>
                     </div>
-                    <span style={{ backgroundColor: '#a855f7', color: '#fff', padding: '8px 14px', borderRadius: '6px', fontSize: '0.82rem', fontWeight: 'bold' }}>
-                      Comparar
-                    </span>
                   </div>
                 </div>
-              </div>
-            </Link>
-          ))}
-        </div>
+              </Link>
+            ))}
+          </div>
+
+          {restantes > 0 && (
+            <div style={{ textAlign: 'center', marginTop: '40px' }}>
+              <button
+                onClick={() => setCantidadVisible((prev) => prev + 24)}
+                style={{
+                  backgroundColor: '#16192b',
+                  color: '#2dd4bf',
+                  border: '2px solid #2dd4bf',
+                  padding: '14px 32px',
+                  borderRadius: '10px',
+                  fontSize: '1rem',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                }}
+              >
+                Cargar más ofertas ({restantes} restantes)
+              </button>
+            </div>
+          )}
+        </>
       )}
+
       <section style={{ marginTop: '60px', backgroundColor: '#0b0d17', padding: '28px', borderRadius: '12px', border: '1px solid #1f293d' }}>
         <h2 style={{ color: '#fff', fontSize: '1.3rem', marginTop: 0 }}>Sobre el comparador de precios de RadarJuegos</h2>
         <p style={{ color: '#94a3b8', lineHeight: '1.7', marginBottom: 0 }}>
