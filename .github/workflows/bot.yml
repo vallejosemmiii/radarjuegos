@@ -1,25 +1,30 @@
-name: Bot Automatizado de Precios
+name: rastrear-ofertas
 
 on:
+  push:
+    branches:
+      - main
+      - master
   schedule:
-    - cron: '0 8 * * *'
-  workflow_dispatch: 
+    - cron: '0 * * * *'
+  workflow_dispatch:
 
 jobs:
   rastrear-ofertas:
     runs-on: ubuntu-latest
+
     steps:
       - name: Descargar el código
         uses: actions/checkout@v4
-        
+
       - name: Preparar servidor Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22   # <--- CAMBIADO A 22
-          
+          node-version: '20'
+
       - name: Instalar conector de Base de Datos
         run: npm install @supabase/supabase-js
-        
+
       - name: Encender el Bot
         env:
           TWITCH_CLIENT_ID: ${{ secrets.TWITCH_CLIENT_ID }}
