@@ -1,9 +1,9 @@
-'use client';
-
-import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import ShareButtons from '../../components/ShareButtons';
+import SafeImage from '../../components/SafeImage';
+
+export const revalidate = 3600;
 
 const supabase = createClient(
   'https://iqndiyuhcjxrugzfyjaj.supabase.co',
@@ -24,51 +24,45 @@ const formatearFechaLarga = (isoString) => {
   });
 };
 
-export default function DetalleNoticia() {
-  const params = useParams();
-  const slug = params?.slug;
-  const [noticia, setNoticia] = useState(null);
-  const [relacionadas, setRelacionadas] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [copiado, setCopiado] = useState(false);
+export async function generateMetadata({ params }) {
+  const { slug } = await params;
+  const { data: noticia } = await supabase
+    .from('noticias')
+    .select('title, summary, cover_image')
+    .eq('slug', slug)
+    .single();
 
-  useEffect(() => {
-    if (!slug) return;
-    async function cargarArticulo() {
-      const { data } = await supabase
-        .from('noticias')
-        .select('*')
-        .eq('slug', slug)
-        .single();
-
-      if (data) {
-        setNoticia(data);
-        const { data: otras } = await supabase
-          .from('noticias')
-          .select('id, title, slug, cover_image, source_name, published_at')
-          .neq('id', data.id)
-          .order('published_at', { ascending: false })
-          .limit(3);
-        if (otras) setRelacionadas(otras);
-      }
-      setLoading(false);
-    }
-    cargarArticulo();
-  }, [slug]);
-
-  const copiarEnlace = () => {
-    navigator.clipboard.writeText(`https://radarjuegos.lat/noticias/${slug}`);
-    setCopiado(true);
-    setTimeout(() => setCopiado(false), 2500);
-  };
-
-  if (loading) {
-    return (
-      <div style={{ textAlign: 'center', padding: '120px 20px', color: '#a855f7', fontSize: '1.2rem' }}>
-        Cargando artículo...
-      </div>
-    );
+  if (!noticia) {
+    return { title: 'Noticia no encontrada' };
   }
+
+  return {
+    title: noticia.title,
+    description: noticia.summary || noticia.title,
+    openGraph: {
+      title: noticia.title,
+      description: noticia.summary || noticia.title,
+      url: `https://radarjuegos.lat/noticias/${slug}`,
+      images: [noticia.cover_image || FALLBACK_IMG],
+      type: 'article',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: noticia.title,
+      description: noticia.summary || noticia.title,
+      images: [noticia.cover_image || FALLBACK_IMG],
+    },
+  };
+}
+
+export default async function DetalleNoticia({ params }) {
+  const { slug } = await params;
+
+  const { data: noticia } = await supabase
+    .from('noticias')
+    .select('*')
+    .eq('slug', slug)
+    .single();
 
   if (!noticia) {
     return (
@@ -81,8 +75,14 @@ export default function DetalleNoticia() {
     );
   }
 
-  const urlCompartir = encodeURIComponent(`https://radarjuegos.lat/noticias/${noticia.slug}`);
-  const textoCompartir = encodeURIComponent(noticia.title);
+  const { data: relacionadas } = await supabase
+    .from('noticias')
+    .select('id, title, slug, cover_image, source_name, published_at')
+    .neq('id', noticia.id)
+    .order('published_at', { ascending: false })
+    .limit(3);
+
+  const urlCompleta = `https://radarjuegos.lat/noticias/${noticia.slug}`;
 
   return (
     <article style={{ maxWidth: '900px', margin: '0 auto', padding: '40px 20px', color: '#e2e8f0' }}>
@@ -108,12 +108,9 @@ export default function DetalleNoticia() {
         {noticia.title}
       </h1>
 
-      <img
+      <SafeImage
         src={noticia.cover_image || FALLBACK_IMG}
         alt={noticia.title}
-        onError={(e) => {
-          e.currentTarget.src = FALLBACK_IMG;
-        }}
         style={{
           width: '100%',
           maxHeight: '460px',
@@ -166,34 +163,15 @@ export default function DetalleNoticia() {
       </div>
 
       {/* COMPARTIR ARTÍCULO */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center', marginBottom: '50px' }}>
-        <span style={{ color: '#94a3b8', fontWeight: 'bold', fontSize: '0.9rem', marginRight: '6px' }}>Compartir:</span>
-        <a
-          href={`https://www.facebook.com/sharer/sharer.php?u=${urlCompartir}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{ backgroundColor: '#1877f2', color: '#fff', padding: '8px 16px', borderRadius: '6px', textDecoration: 'none', fontWeight: 'bold', fontSize: '0.88rem' }}
-        >
-          Facebook
-        </a>
-        <a
-          href={`https://api.whatsapp.com/send?text=${textoCompartir}%20${urlCompartir}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{ backgroundColor: '#25d366', color: '#0f111a', padding: '8px 16px', borderRadius: '6px', textDecoration: 'none', fontWeight: 'bold', fontSize: '0.88rem' }}
-        >
-          WhatsApp
-        </a>
-        <button
-          onClick={copiarEnlace}
-          style={{ backgroundColor: '#1f293d', color: '#fff', border: '1px solid #334155', padding: '8px 16px', borderRadius: '6px', fontWeight: 'bold', fontSize: '0.88rem', cursor: 'pointer' }}
-        >
-          {copiado ? '✓ Enlace copiado' : 'Copiar enlace'}
-        </button>
+      <div style={{ marginBottom: '50px', maxWidth: '420px' }}>
+        <p style={{ color: '#94a3b8', fontWeight: 'bold', fontSize: '0.9rem', marginBottom: '10px' }}>
+          Compartir noticia:
+        </p>
+        <ShareButtons url={urlCompleta} texto={noticia.title} />
       </div>
 
       {/* NOTICIAS RELACIONADAS */}
-      {relacionadas.length > 0 && (
+      {relacionadas && relacionadas.length > 0 && (
         <section>
           <h2 style={{ color: '#fff', fontSize: '1.4rem', borderBottom: '2px solid #a855f7', display: 'inline-block', paddingBottom: '6px', marginBottom: '20px' }}>
             Más noticias recientes
@@ -202,12 +180,9 @@ export default function DetalleNoticia() {
             {relacionadas.map((rel) => (
               <Link href={`/noticias/${rel.slug}`} key={rel.id} style={{ textDecoration: 'none' }}>
                 <div style={{ backgroundColor: '#0b0d17', borderRadius: '10px', overflow: 'hidden', border: '1px solid #1f293d', height: '100%' }}>
-                  <img
+                  <SafeImage
                     src={rel.cover_image || FALLBACK_IMG}
                     alt={rel.title}
-                    onError={(e) => {
-                      e.currentTarget.src = FALLBACK_IMG;
-                    }}
                     style={{ width: '100%', height: '140px', objectFit: 'cover' }}
                   />
                   <div style={{ padding: '15px' }}>
