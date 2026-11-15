@@ -2,19 +2,92 @@ import Link from 'next/link';
 
 export default function NotFound() {
   return (
-    <div style={{ textAlign: 'center', padding: '100px 20px', color: '#e2e8f0', minHeight: '60vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
-      <h1 style={{ fontSize: '6rem', margin: '0', color: '#a855f7', fontWeight: '900', textShadow: '0 0 25px rgba(168, 85, 247, 0.5)' }}>
+    <div
+      style={{
+        maxWidth: '720px',
+        margin: '0 auto',
+        padding: '90px 20px',
+        textAlign: 'center',
+        color: '#e2e8f0',
+      }}
+    >
+      <div
+        style={{
+          fontSize: '5rem',
+          fontWeight: '900',
+          fontStyle: 'italic',
+          color: '#a855f7',
+          lineHeight: 1,
+          marginBottom: '15px',
+          textShadow: '0 0 25px rgba(168, 85, 247, 0.45)',
+        }}
+      >
         404
+      </div>
+
+      <h1 style={{ fontSize: '2rem', color: '#fff', margin: '0 0 14px 0' }}>
+        Esta página salió del radar
       </h1>
-      <h2 style={{ fontSize: '2rem', color: '#fff', margin: '10px 0 20px 0' }}>
-        Game Over: Página no encontrada
-      </h2>
-      <p style={{ color: '#94a3b8', maxWidth: '500px', marginBottom: '35px', fontSize: '1.1rem', lineHeight: '1.6' }}>
-        Parece que el enlace al que intentas acceder se perdió en otra dimensión o el juego fue movido de servidor.
+
+      <p style={{ color: '#94a3b8', fontSize: '1.05rem', lineHeight: '1.6', margin: '0 0 35px 0' }}>
+        El enlace que buscas ya no existe, cambió de dirección o la promoción finalizó. Puedes explorar nuestras secciones actualizadas:
       </p>
-      <Link href="/" style={{ backgroundColor: '#2dd4bf', color: '#0f111a', padding: '14px 30px', borderRadius: '8px', textDecoration: 'none', fontWeight: 'bold', fontSize: '1.1rem' }}>
-        Volver al Catálogo Principal
-      </Link>
+
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', justifyContent: 'center' }}>
+        <Link
+          href="/"
+          style={{
+            backgroundColor: '#a855f7',
+            color: '#fff',
+            padding: '12px 22px',
+            borderRadius: '8px',
+            textDecoration: 'none',
+            fontWeight: 'bold',
+          }}
+        >
+          Ir al Inicio
+        </Link>
+        <Link
+          href="/ofertas"
+          style={{
+            backgroundColor: '#2dd4bf',
+            color: '#0f111a',
+            padding: '12px 22px',
+            borderRadius: '8px',
+            textDecoration: 'none',
+            fontWeight: 'bold',
+          }}
+        >
+          Ver Ofertas
+        </Link>
+        <Link
+          href="/gratuitos"
+          style={{
+            backgroundColor: '#10b981',
+            color: '#0f111a',
+            padding: '12px 22px',
+            borderRadius: '8px',
+            textDecoration: 'none',
+            fontWeight: 'bold',
+          }}
+        >
+          Juegos Gratis
+        </Link>
+        <Link
+          href="/noticias"
+          style={{
+            backgroundColor: '#16192b',
+            color: '#e2e8f0',
+            border: '1px solid #334155',
+            padding: '12px 22px',
+            borderRadius: '8px',
+            textDecoration: 'none',
+            fontWeight: 'bold',
+          }}
+        >
+          Noticias
+        </Link>
+      </div>
     </div>
   );
 }
