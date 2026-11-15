@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import Link from 'next/link';
+import StoreLogo from '../components/StoreLogo';
 
 const supabase = createClient(
   'https://iqndiyuhcjxrugzfyjaj.supabase.co',
@@ -27,6 +28,7 @@ export default function Gratuitos() {
   const [games, setGames] = useState([]);
   const [tiendaFiltro, setTiendaFiltro] = useState('Todas');
   const [busqueda, setBusqueda] = useState('');
+  const [cantidadVisible, setCantidadVisible] = useState(24);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -66,6 +68,9 @@ export default function Gratuitos() {
     );
   });
 
+  const visibles = filtrados.slice(0, cantidadVisible);
+  const restantes = filtrados.length - visibles.length;
+
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '40px 20px', color: '#e2e8f0' }}>
       <div style={{ marginBottom: '25px' }}>
@@ -82,7 +87,10 @@ export default function Gratuitos() {
         {tiendasDisponibles.map((tienda) => (
           <button
             key={tienda}
-            onClick={() => setTiendaFiltro(tienda)}
+            onClick={() => {
+              setTiendaFiltro(tienda);
+              setCantidadVisible(24);
+            }}
             style={{
               padding: '10px 18px',
               borderRadius: '8px',
@@ -91,10 +99,16 @@ export default function Gratuitos() {
               color: tiendaFiltro === tienda ? '#0f111a' : '#fff',
               fontWeight: 'bold',
               cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
               transition: 'all 0.2s',
             }}
           >
-            {tienda}
+            {tienda !== 'Todas' && tienda !== 'Free-to-Play' && (
+              <StoreLogo storeName={tienda} size={16} />
+            )}
+            <span>{tienda}</span>
           </button>
         ))}
       </div>
@@ -103,7 +117,10 @@ export default function Gratuitos() {
         type="text"
         placeholder="🔍 Buscar juego gratuito (Ej: Genshin Impact, Aniimo, Epic)..."
         value={busqueda}
-        onChange={(e) => setBusqueda(e.target.value)}
+        onChange={(e) => {
+          setBusqueda(e.target.value);
+          setCantidadVisible(24);
+        }}
         style={{
           width: '100%',
           padding: '16px 22px',
@@ -128,111 +145,142 @@ export default function Gratuitos() {
           </p>
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '25px' }}>
-          {filtrados.map((game) => (
-            <div
-              key={game.id}
-              style={{
-                backgroundColor: '#0b0d17',
-                borderRadius: '12px',
-                overflow: 'hidden',
-                border: '1px solid #10b981',
-                display: 'flex',
-                flexDirection: 'column',
-                height: '100%',
-                boxShadow: '0 8px 20px rgba(16, 185, 129, 0.12)',
-              }}
-            >
-              <div style={{ position: 'relative' }}>
-                <Link href={`/juego/${game.slug}`}>
-                  <img
-                    src={game.cover_image || FALLBACK_IMG}
-                    alt={game.title}
-                    style={{ width: '100%', height: '190px', objectFit: 'cover', display: 'block' }}
-                    onError={(e) => {
-                      e.currentTarget.src = FALLBACK_IMG;
-                    }}
-                  />
-                </Link>
-                <span
-                  style={{
-                    position: 'absolute',
-                    top: '12px',
-                    left: '12px',
-                    backgroundColor: colorTienda(game.tiendaPrincipal),
-                    color: '#fff',
-                    padding: '5px 10px',
-                    borderRadius: '6px',
-                    fontSize: '0.78rem',
-                    fontWeight: 'bold',
-                    border: '1px solid rgba(255,255,255,0.2)',
-                  }}
-                >
-                  {game.tiendaPrincipal}
-                </span>
-                <span
-                  style={{
-                    position: 'absolute',
-                    top: '12px',
-                    right: '12px',
-                    backgroundColor: '#10b981',
-                    color: '#0f111a',
-                    padding: '5px 10px',
-                    borderRadius: '6px',
-                    fontSize: '0.78rem',
-                    fontWeight: '900',
-                  }}
-                >
-                  100% GRATIS
-                </span>
-              </div>
-
-              <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
-                <Link href={`/juego/${game.slug}`} style={{ textDecoration: 'none' }}>
-                  <h3 style={{ margin: '0 0 8px 0', color: '#fff', fontSize: '1.15rem' }}>{game.title}</h3>
-                </Link>
-                <p style={{ color: '#94a3b8', fontSize: '0.85rem', margin: '0 0 18px 0' }}>
-                  {game.platform || 'PC'}
-                </p>
-
-                <div style={{ marginTop: 'auto', display: 'flex', gap: '10px' }}>
-                  <a
-                    href={game.enlaceReclamar}
-                    target="_blank"
-                    rel="noopener noreferrer"
+        <>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '25px' }}>
+            {visibles.map((game) => (
+              <div
+                key={game.id}
+                style={{
+                  backgroundColor: '#0b0d17',
+                  borderRadius: '12px',
+                  overflow: 'hidden',
+                  border: '1px solid #10b981',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  height: '100%',
+                  boxShadow: '0 8px 20px rgba(16, 185, 129, 0.12)',
+                }}
+              >
+                <div style={{ position: 'relative' }}>
+                  <Link href={`/juego/${game.slug}`}>
+                    <img
+                      src={game.cover_image || FALLBACK_IMG}
+                      alt={game.title}
+                      style={{ width: '100%', height: '190px', objectFit: 'cover', display: 'block' }}
+                      onError={(e) => {
+                        e.currentTarget.src = FALLBACK_IMG;
+                      }}
+                    />
+                  </Link>
+                  <span
                     style={{
-                      flex: 1,
-                      textAlign: 'center',
+                      position: 'absolute',
+                      top: '12px',
+                      left: '12px',
+                      backgroundColor: colorTienda(game.tiendaPrincipal),
+                      color: '#fff',
+                      padding: '5px 10px',
+                      borderRadius: '6px',
+                      fontSize: '0.78rem',
+                      fontWeight: 'bold',
+                      border: '1px solid rgba(255,255,255,0.2)',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                    }}
+                  >
+                    <StoreLogo storeName={game.tiendaPrincipal} size={14} />
+                    <span>{game.tiendaPrincipal}</span>
+                  </span>
+                  <span
+                    style={{
+                      position: 'absolute',
+                      top: '12px',
+                      right: '12px',
                       backgroundColor: '#10b981',
                       color: '#0f111a',
-                      padding: '10px 12px',
+                      padding: '5px 10px',
                       borderRadius: '6px',
-                      textDecoration: 'none',
-                      fontWeight: 'bold',
-                      fontSize: '0.9rem',
+                      fontSize: '0.78rem',
+                      fontWeight: '900',
                     }}
                   >
-                    Reclamar Gratis ↗
-                  </a>
-                  <Link
-                    href={`/juego/${game.slug}`}
-                    style={{
-                      backgroundColor: '#1f293d',
-                      color: '#e2e8f0',
-                      padding: '10px 14px',
-                      borderRadius: '6px',
-                      textDecoration: 'none',
-                      fontWeight: 'bold',
-                      fontSize: '0.9rem',
-                    }}
-                  >
-                    Ficha
+                    100% GRATIS
+                  </span>
+                </div>
+
+                <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
+                  <Link href={`/juego/${game.slug}`} style={{ textDecoration: 'none' }}>
+                    <h3 style={{ margin: '0 0 8px 0', color: '#fff', fontSize: '1.15rem' }}>{game.title}</h3>
                   </Link>
+                  <p style={{ color: '#94a3b8', fontSize: '0.85rem', margin: '0 0 18px 0' }}>
+                    {game.platform || 'PC'}
+                  </p>
+
+                  <div style={{ marginTop: 'auto', display: 'flex', gap: '10px' }}>
+                    <a
+                      href={game.enlaceReclamar}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        flex: 1,
+                        textAlign: 'center',
+                        backgroundColor: '#10b981',
+                        color: '#0f111a',
+                        padding: '10px 12px',
+                        borderRadius: '6px',
+                        textDecoration: 'none',
+                        fontWeight: 'bold',
+                        fontSize: '0.9rem',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px',
+                      }}
+                    >
+                      <StoreLogo storeName={game.tiendaPrincipal} size={15} />
+                      <span>Reclamar Gratis ↗</span>
+                    </a>
+                    <Link
+                      href={`/juego/${game.slug}`}
+                      style={{
+                        backgroundColor: '#1f293d',
+                        color: '#e2e8f0',
+                        padding: '10px 14px',
+                        borderRadius: '6px',
+                        textDecoration: 'none',
+                        fontWeight: 'bold',
+                        fontSize: '0.9rem',
+                      }}
+                    >
+                      Ficha
+                    </Link>
+                  </div>
                 </div>
               </div>
+            ))}
+          </div>
+
+          {restantes > 0 && (
+            <div style={{ textAlign: 'center', marginTop: '40px' }}>
+              <button
+                onClick={() => setCantidadVisible((prev) => prev + 24)}
+                style={{
+                  backgroundColor: '#16192b',
+                  color: '#10b981',
+                  border: '2px solid #10b981',
+                  padding: '14px 32px',
+                  borderRadius: '10px',
+                  fontSize: '1rem',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                }}
+              >
+                Cargar más gratuitos ({restantes} restantes)
+              </button>
             </div>
-          ))}
-        </div>
+          )}
+        </>
       )}
 
       {/* BLOQUE INFORMATIVO SEO */}
