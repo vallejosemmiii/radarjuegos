@@ -41,6 +41,29 @@ function elegirMejorImagen(info) {
     return FALLBACK_IMG;
 }
 
+function detectarTiendaGratis(textoPlataforma, tituloOriginal) {
+    const combinado = `${textoPlataforma || ''} ${tituloOriginal || ''}`.toLowerCase();
+    if (combinado.includes('epic')) return 'Epic Games';
+    if (combinado.includes('steam')) return 'Steam';
+    if (combinado.includes('gog')) return 'GOG';
+    if (combinado.includes('prime') || combinado.includes('amazon')) return 'Prime Gaming';
+    if (combinado.includes('ubisoft') || combinado.includes('uplay')) return 'Ubisoft';
+    if (combinado.includes('itch')) return 'Itch.io';
+    if (combinado.includes('playstation') || combinado.includes('ps4') || combinado.includes('ps5')) return 'PlayStation';
+    if (combinado.includes('xbox')) return 'Xbox';
+    return 'Tienda Digital';
+}
+
+function limpiarTituloGratis(titulo) {
+    return titulo
+        .replace(/\(.*?\)/g, '')
+        .replace(/\[.*?\]/g, '')
+        .replace(/\b(giveaway|free|gratis|key|keys)\b/gi, '')
+        .replace(/^(epic games|steam|gog|prime gaming|ubisoft|itch\.io)\s*:\s*/i, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
 async function getIGDBToken() {
     if (!TWITCH_CLIENT_ID || !TWITCH_CLIENT_SECRET) {
         console.error("❌ Faltan TWITCH_CLIENT_ID o TWITCH_CLIENT_SECRET en GitHub Secrets.");
@@ -75,15 +98,10 @@ async function consultarIGDB(token, bodyQuery) {
             },
             body: bodyQuery
         });
-        if (!res.ok) {
-            const errText = await res.text();
-            console.error(`⚠️ Error IGDB (${res.status}): ${errText}`);
-            return [];
-        }
+        if (!res.ok) return [];
         const data = await res.json();
         return Array.isArray(data) ? data : [];
     } catch (e) {
-        console.error("⚠️ Error de red IGDB:", e.message);
         return [];
     }
 }
@@ -120,7 +138,7 @@ function filtrarColumnasValidas(objeto, columnasTabla) {
 }
 
 async function ejecutarBot() {
-    console.log("🚀 Iniciando Mega-Bot v5.2 (IGDB + Steam ES + CheapShark)...");
+    console.log("🚀 Iniciando Mega-Bot v6.0 (IGDB + Steam ES + CheapShark + Gratuitos)...");
     const igdbToken = await getIGDBToken();
     if (!igdbToken) return;
 
@@ -130,7 +148,6 @@ async function ejecutarBot() {
         return;
     }
 
-    console.log(`📦 Juegos actuales en base de datos: ${(existentes || []).length}`);
     const mapaExistentes = new Map((existentes || []).map(j => [j.slug, j]));
     const columnasTabla = existentes && existentes.length > 0 ? new Set(Object.keys(existentes[0])) : new Set();
 
@@ -144,7 +161,6 @@ async function ejecutarBot() {
     async function descargarRadar(whereClause, sortClause, totalDeseado, etiqueta) {
         console.log(`\n📡 Radar: ${etiqueta} (Objetivo: ${totalDeseado})...`);
         let agregados = 0;
-        let primerErrorMostrado = false;
 
         for (let offset = 0; offset < totalDeseado; offset += 100) {
             const query = `fields ${campos}; where ${whereClause}; sort ${sortClause}; limit 100; offset ${offset};`;
@@ -171,11 +187,7 @@ async function ejecutarBot() {
                     themes: info.themes ? info.themes.map(t => t.name).join(', ') : 'Varios'
                 }, columnasTabla);
 
-                const { data: insertado, error: insertError } = await supabase.from('games').insert(nuevoJuego).select().single();
-                if (insertError && !primerErrorMostrado) {
-                    console.error(`⚠️ Error al guardar "${info.name}" en Supabase:`, insertError.message);
-                    primerErrorMostrado = true;
-                }
+                const { data: insertado } = await supabase.from('games').insert(nuevoJuego).select().single();
                 if (insertado) {
                     mapaExistentes.set(slug, insertado);
                     agregados++;
@@ -215,7 +227,7 @@ async function ejecutarBot() {
     );
 
     // =========================================================================
-    // FASE 2: REPARACIÓN DE FICHAS INCOMPLETAS (REVISA TODOS LOS EXISTENTES)
+    // FASE 2: REPARACIÓN DE FICHAS INCOMPLETAS
     // =========================================================================
     console.log("\n🛠️ Auditando y reparando fichas incompletas...");
     const { data: todosLosJuegos } = await supabase.from('games').select('*');
@@ -224,10 +236,7 @@ async function ejecutarBot() {
         j.cover_image.includes('unsplash') ||
         !j.trailer_url ||
         !j.summary ||
-        j.summary.startsWith('Sin descripción') ||
-        !j.developer ||
-        j.developer === 'No especificado' ||
-        j.developer === 'Desconocido'
+        j.summary.startsWith('Sin descripción')
     );
 
     let reparados = 0;
@@ -289,7 +298,6 @@ async function ejecutarBot() {
 
     let ofertasActualizadas = 0;
     let traduccionesSteam = 0;
-    let errorPrecioMostrado = false;
 
     for (const game of (juegosLanzados || [])) {
         try {
@@ -323,10 +331,6 @@ async function ejecutarBot() {
                 }));
 
                 const { error: priceErr } = await supabase.from('game_prices').insert(filasPrecios);
-                if (priceErr && !errorPrecioMostrado) {
-                    console.error(`⚠️ Error guardando precios de "${game.title}":`, priceErr.message);
-                    errorPrecioMostrado = true;
-                }
                 if (!priceErr) ofertasActualizadas++;
 
                 const steamId = mejoresOfertas.find(d => d.steamAppID)?.steamAppID;
@@ -355,7 +359,123 @@ async function ejecutarBot() {
         await esperar(220);
     }
 
-    console.log(`🎉 ¡Bot v5.2 completado! Ofertas en ${ofertasActualizadas} juegos | ${traduccionesSteam} fichas enriquecidas en español.`);
+    // =========================================================================
+    // FASE 4: RADAR DE JUEGOS GRATUITOS (EPIC, STEAM, GOG, PRIME GAMING Y MÁS)
+    // =========================================================================
+    console.log("\n🎁 Rastreando juegos gratuitos activos en todas las tiendas...");
+    // Limpiamos regalos viejos de ejecuciones anteriores para dejar solo los activos hoy
+    await supabase.from('game_prices').delete().eq('price', 0);
+
+    let gratuitosActivos = 0;
+
+    // Fuente A: GamerPower (Epic Games, GOG, Prime Gaming, Steam, Itch.io, Ubisoft)
+    try {
+        const resGP = await fetch('https://www.gamerpower.com/api/giveaways?type=game');
+        if (resGP.ok) {
+            const listaGP = await resGP.json();
+            if (Array.isArray(listaGP)) {
+                for (const item of listaGP) {
+                    if (item.status && item.status !== 'Active') continue;
+                    // Filtrar DLCs, betas o contenido cosmético
+                    if (/\b(dlc|expansion|soundtrack|pack|beta|demo|in-game|loot|skin|cosmetic)\b/i.test(item.title)) continue;
+
+                    const tituloLimpio = limpiarTituloGratis(item.title);
+                    const slug = crearSlug(tituloLimpio);
+                    if (!slug) continue;
+
+                    const nombreTienda = detectarTiendaGratis(item.platforms, item.title);
+                    let gameId = mapaExistentes.get(slug)?.id;
+
+                    // Si el juego no estaba en nuestra tabla, lo buscamos en IGDB o lo creamos con los datos del regalo
+                    if (!gameId) {
+                        const candidatosIGDB = await consultarIGDB(
+                            igdbToken,
+                            `search "${tituloLimpio.replace(/"/g, '')}"; fields ${campos}; limit 1;`
+                        );
+                        const infoIGDB = candidatosIGDB[0];
+
+                        const nuevoGratis = filtrarColumnasValidas({
+                            title: infoIGDB?.name || tituloLimpio,
+                            slug,
+                            summary: infoIGDB?.summary || item.description || 'Juego gratuito por tiempo limitado.',
+                            release_date: formatearFecha(infoIGDB?.first_release_date) || hoyISO,
+                            platform: item.platforms || 'PC',
+                            cover_image: infoIGDB ? elegirMejorImagen(infoIGDB) : (item.image || item.thumbnail || FALLBACK_IMG),
+                            trailer_url: infoIGDB ? elegirMejorTrailer(infoIGDB.videos) : null,
+                            developer: infoIGDB?.involved_companies?.find(c => c.developer)?.company?.name || 'Estudio Digital',
+                            publisher: infoIGDB?.involved_companies?.find(c => c.publisher)?.company?.name || nombreTienda,
+                            genres: infoIGDB?.genres ? infoIGDB.genres.map(g => g.name).join(', ') : 'Gratuito'
+                        }, columnasTabla);
+
+                        const { data: creado } = await supabase.from('games').insert(nuevoGratis).select().single();
+                        if (creado) {
+                            mapaExistentes.set(slug, creado);
+                            gameId = creado.id;
+                        }
+                        await esperar(250);
+                    }
+
+                    if (gameId) {
+                        await supabase.from('game_prices').insert({
+                            game_id: gameId,
+                            store_name: nombreTienda,
+                            price: 0,
+                            currency: 'USD',
+                            affiliate_url: item.open_giveaway_url || item.gamerpower_url
+                        });
+                        gratuitosActivos++;
+                    }
+                }
+            }
+        }
+    } catch (e) {}
+
+    // Fuente B: CheapShark descuentos del 100% (upperPrice=0)
+    try {
+        const resCSFree = await fetch('https://www.cheapshark.com/api/1.0/deals?upperPrice=0&pageSize=40');
+        if (resCSFree.ok) {
+            const listaCS = await resCSFree.json();
+            if (Array.isArray(listaCS)) {
+                for (const deal of listaCS) {
+                    const slug = crearSlug(deal.title);
+                    if (!slug) continue;
+
+                    let gameId = mapaExistentes.get(slug)?.id;
+                    if (!gameId) {
+                        const nuevoCS = filtrarColumnasValidas({
+                            title: deal.title,
+                            slug,
+                            summary: 'Juego gratuito al 100% de descuento por tiempo limitado.',
+                            release_date: hoyISO,
+                            platform: 'PC',
+                            cover_image: deal.steamAppID
+                                ? `https://cdn.akamai.steamstatic.com/steam/apps/${deal.steamAppID}/library_600x900_2x.jpg`
+                                : (deal.thumb || FALLBACK_IMG)
+                        }, columnasTabla);
+
+                        const { data: creado } = await supabase.from('games').insert(nuevoCS).select().single();
+                        if (creado) {
+                            mapaExistentes.set(slug, creado);
+                            gameId = creado.id;
+                        }
+                    }
+
+                    if (gameId) {
+                        await supabase.from('game_prices').insert({
+                            game_id: gameId,
+                            store_name: tiendas[deal.storeID] || 'Tienda Digital',
+                            price: 0,
+                            currency: 'USD',
+                            affiliate_url: `https://www.cheapshark.com/redirect?dealID=${deal.dealID}`
+                        });
+                        gratuitosActivos++;
+                    }
+                }
+            }
+        }
+    } catch (e) {}
+
+    console.log(`🎉 ¡Bot v6.0 completado! Ofertas en ${ofertasActualizadas} juegos | ${traduccionesSteam} fichas en español | ${gratuitosActivos} gratuitos activos.`);
 }
 
 ejecutarBot();
