@@ -147,7 +147,7 @@ export default function Catalogo() {
     });
   };
 
-  // 1. TOP 4 MÁS ESPERADOS AAA (Ordenados por relevancia AAA, no por indies del día siguiente)
+  // 1. TOP 4 MÁS ESPERADOS AAA
   const futurosAAA = games
     .filter((game) => game.release_date && parseFechaLocal(game.release_date) > hoy)
     .map((game) => ({ ...game, puntajeAAA: calcularPuntajeAAA(game) }))
@@ -158,7 +158,24 @@ export default function Catalogo() {
 
   const mostAnticipatedAAA = futurosAAA.slice(0, 4);
 
-  // 2. JUEGOS LANZADOS CON OFERTAS ACTIVAS
+  // 2. JUEGOS GRATUITOS ACTIVOS ($0)
+  const gratuitosActivos = games
+    .filter(
+      (game) =>
+        Array.isArray(game.game_prices) &&
+        game.game_prices.some((p) => Number(p.price) === 0)
+    )
+    .map((game) => {
+      const ofertaGratis = game.game_prices.find((p) => Number(p.price) === 0);
+      return {
+        ...game,
+        mejorPrecioNum: 0,
+        tiendaTop: ofertaGratis?.store_name || 'Tienda Oficial',
+      };
+    })
+    .slice(0, 4);
+
+  // 3. JUEGOS LANZADOS CON OFERTAS DE PAGO ACTIVAS (> $0)
   const conOfertas = games
     .filter((game) => {
       const esLanzado = !game.release_date || parseFechaLocal(game.release_date) <= hoy;
@@ -172,7 +189,8 @@ export default function Catalogo() {
         tiendaTop: preciosOrdenados[0].store_name,
         puntajeAAA: calcularPuntajeAAA(game),
       };
-    });
+    })
+    .filter((game) => game.mejorPrecioNum > 0);
 
   // Más jugados en oferta (Top 8 por popularidad AAA)
   const masJugadosEnOferta = [...conOfertas]
@@ -192,57 +210,69 @@ export default function Catalogo() {
     game.title.toLowerCase().includes(busqueda.toLowerCase())
   );
 
-  const renderTarjetaOferta = (game) => (
-    <Link href={`/juego/${game.slug}`} key={game.id} style={{ textDecoration: 'none' }}>
-      <div
-        style={{
-          backgroundColor: '#0b0d17',
-          borderRadius: '12px',
-          overflow: 'hidden',
-          border: '1px solid #1f293d',
-          display: 'flex',
-          flexDirection: 'column',
-          height: '100%',
-          transition: 'transform 0.3s, border-color 0.3s',
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.transform = 'translateY(-6px)';
-          e.currentTarget.style.borderColor = '#2dd4bf';
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.transform = 'translateY(0)';
-          e.currentTarget.style.borderColor = '#1f293d';
-        }}
-      >
-        <img
-          src={game.cover_image || FALLBACK_IMG}
-          alt={game.title}
-          style={{ width: '100%', height: '185px', objectFit: 'cover' }}
-          onError={(e) => {
-            e.currentTarget.src = FALLBACK_IMG;
+  const renderTarjetaOferta = (game) => {
+    const esGratis = game.mejorPrecioNum === 0;
+    return (
+      <Link href={`/juego/${game.slug}`} key={game.id} style={{ textDecoration: 'none' }}>
+        <div
+          style={{
+            backgroundColor: '#0b0d17',
+            borderRadius: '12px',
+            overflow: 'hidden',
+            border: esGratis ? '1px solid #10b981' : '1px solid #1f293d',
+            display: 'flex',
+            flexDirection: 'column',
+            height: '100%',
+            transition: 'transform 0.3s, border-color 0.3s',
           }}
-        />
-        <div style={{ padding: '18px', display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
-          <h3 style={{ margin: '0 0 12px 0', color: '#fff', fontSize: '1.08rem', lineHeight: '1.3' }}>
-            {game.title}
-          </h3>
-          <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <span style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block' }}>
-                {game.tiendaTop || 'Mejor oferta'}
-              </span>
-              <span style={{ color: '#10b981', fontWeight: 'bold', fontSize: '1.2rem' }}>
-                ${game.mejorPrecioNum.toFixed(2)}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'translateY(-6px)';
+            e.currentTarget.style.borderColor = esGratis ? '#10b981' : '#2dd4bf';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.borderColor = esGratis ? '#10b981' : '#1f293d';
+          }}
+        >
+          <img
+            src={game.cover_image || FALLBACK_IMG}
+            alt={game.title}
+            style={{ width: '100%', height: '185px', objectFit: 'cover' }}
+            onError={(e) => {
+              e.currentTarget.src = FALLBACK_IMG;
+            }}
+          />
+          <div style={{ padding: '18px', display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
+            <h3 style={{ margin: '0 0 12px 0', color: '#fff', fontSize: '1.08rem', lineHeight: '1.3' }}>
+              {game.title}
+            </h3>
+            <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <span style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block' }}>
+                  {game.tiendaTop || 'Mejor oferta'}
+                </span>
+                <span style={{ color: '#10b981', fontWeight: 'bold', fontSize: '1.2rem' }}>
+                  {esGratis ? 'GRATIS' : `$${game.mejorPrecioNum.toFixed(2)}`}
+                </span>
+              </div>
+              <span
+                style={{
+                  backgroundColor: esGratis ? '#10b981' : '#2dd4bf',
+                  color: '#0f111a',
+                  padding: '8px 14px',
+                  borderRadius: '6px',
+                  fontSize: '0.82rem',
+                  fontWeight: 'bold',
+                }}
+              >
+                {esGratis ? 'Reclamar' : 'Ver Oferta'}
               </span>
             </div>
-            <span style={{ backgroundColor: '#2dd4bf', color: '#0f111a', padding: '8px 14px', borderRadius: '6px', fontSize: '0.82rem', fontWeight: 'bold' }}>
-              Ver Oferta
-            </span>
           </div>
         </div>
-      </div>
-    </Link>
-  );
+      </Link>
+    );
+  };
 
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px', color: '#e2e8f0' }}>
@@ -258,7 +288,7 @@ export default function Catalogo() {
             </Link>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(450px, 1fr))', gap: '25px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 420px), 1fr))', gap: '25px' }}>
             {mostAnticipatedAAA.map((game) => (
               <Link href={`/juego/${game.slug}`} key={game.id} style={{ textDecoration: 'none' }}>
                 <div
@@ -357,17 +387,24 @@ export default function Catalogo() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '25px' }}>
             {juegosFiltrados.slice(0, 24).map((game) => {
               const precios = game.game_prices || [];
-              const mejorPrecio = precios.length > 0
-                ? `$${Math.min(...precios.map((p) => Number(p.price))).toFixed(2)}`
-                : null;
+              const minPrecio = precios.length > 0 ? Math.min(...precios.map((p) => Number(p.price))) : null;
               return (
                 <Link href={`/juego/${game.slug}`} key={game.id} style={{ textDecoration: 'none' }}>
                   <div style={{ backgroundColor: '#0b0d17', borderRadius: '12px', overflow: 'hidden', border: '1px solid #1f293d', display: 'flex', flexDirection: 'column', height: '100%' }}>
-                    <img src={game.cover_image || FALLBACK_IMG} alt={game.title} style={{ width: '100%', height: '180px', objectFit: 'cover' }} />
+                    <img
+                      src={game.cover_image || FALLBACK_IMG}
+                      alt={game.title}
+                      style={{ width: '100%', height: '180px', objectFit: 'cover' }}
+                      onError={(e) => {
+                        e.currentTarget.src = FALLBACK_IMG;
+                      }}
+                    />
                     <div style={{ padding: '18px', display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
                       <h3 style={{ margin: '0 0 10px 0', color: '#fff', fontSize: '1.05rem' }}>{game.title}</h3>
-                      {mejorPrecio ? (
-                        <span style={{ color: '#10b981', fontWeight: 'bold' }}>Desde {mejorPrecio}</span>
+                      {minPrecio !== null ? (
+                        <span style={{ color: '#10b981', fontWeight: 'bold' }}>
+                          {minPrecio === 0 ? 'GRATIS' : `Desde $${minPrecio.toFixed(2)}`}
+                        </span>
                       ) : (
                         <span style={{ color: '#a855f7', fontSize: '0.85rem' }}>{formatearFecha(game.release_date)}</span>
                       )}
@@ -384,7 +421,24 @@ export default function Catalogo() {
         </p>
       ) : (
         <>
-          {/* SECCIÓN 3: MÁS JUGADOS EN OFERTA */}
+          {/* SECCIÓN 3: JUEGOS GRATUITOS ACTIVOS */}
+          {gratuitosActivos.length > 0 && (
+            <div style={{ marginBottom: '55px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px', marginBottom: '25px' }}>
+                <h2 style={{ fontSize: '1.4rem', color: '#fff', textTransform: 'uppercase', borderBottom: '3px solid #10b981', display: 'inline-block', paddingBottom: '5px', margin: 0, letterSpacing: '1px' }}>
+                  🎁 Juegos Gratuitos Activos
+                </h2>
+                <Link href="/gratuitos" style={{ color: '#10b981', textDecoration: 'none', fontWeight: 'bold', fontSize: '0.95rem' }}>
+                  Ver todos los juegos gratis →
+                </Link>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '25px' }}>
+                {gratuitosActivos.map(renderTarjetaOferta)}
+              </div>
+            </div>
+          )}
+
+          {/* SECCIÓN 4: MÁS JUGADOS EN OFERTA */}
           {masJugadosEnOferta.length > 0 && (
             <div style={{ marginBottom: '55px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px', marginBottom: '25px' }}>
@@ -401,14 +455,14 @@ export default function Catalogo() {
             </div>
           )}
 
-          {/* SECCIÓN 4: MEJORES OFERTAS DESTACADAS (MENOR PRECIO) */}
+          {/* SECCIÓN 5: MEJORES OFERTAS DESTACADAS (MENOR PRECIO) */}
           {mejoresOfertasDestacadas.length > 0 && (
             <div style={{ marginBottom: '30px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px', marginBottom: '25px' }}>
-                <h2 style={{ fontSize: '1.4rem', color: '#fff', textTransform: 'uppercase', borderBottom: '3px solid #10b981', display: 'inline-block', paddingBottom: '5px', margin: 0, letterSpacing: '1px' }}>
+                <h2 style={{ fontSize: '1.4rem', color: '#fff', textTransform: 'uppercase', borderBottom: '3px solid #a855f7', display: 'inline-block', paddingBottom: '5px', margin: 0, letterSpacing: '1px' }}>
                   💎 Mejores Ofertas del Día
                 </h2>
-                <Link href="/ofertas" style={{ color: '#10b981', textDecoration: 'none', fontWeight: 'bold', fontSize: '0.95rem' }}>
+                <Link href="/ofertas" style={{ color: '#a855f7', textDecoration: 'none', fontWeight: 'bold', fontSize: '0.95rem' }}>
                   Explorar catálogo completo de ofertas →
                 </Link>
               </div>
