@@ -12,7 +12,6 @@ const supabase = createClient(
 
 const FALLBACK_IMG = 'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=800&q=80';
 
-// Clasificador inteligente para detectar lanzamientos y éxitos AAA
 const ESTUDIOS_AAA = [
   'rockstar', 'bethesda', 'sony', 'playstation', 'microsoft', 'xbox', 'square enix',
   'capcom', 'ubisoft', 'electronic arts', 'ea ', 'bandai namco', 'sega', 'nintendo',
@@ -114,17 +113,27 @@ const RelojRegresivo = ({ fechaDestino }) => {
 
 export default function Catalogo() {
   const [games, setGames] = useState([]);
+  const [noticiasRecientes, setNoticiasRecientes] = useState([]);
   const [busqueda, setBusqueda] = useState('');
   const [searchFocus, setSearchFocus] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function cargarDatos() {
-      const { data } = await supabase
-        .from('games')
-        .select('*, game_prices(*)')
-        .order('release_date', { ascending: true });
-      if (data) setGames(data);
+      const [{ data: juegosData }, { data: noticiasData }] = await Promise.all([
+        supabase
+          .from('games')
+          .select('*, game_prices(*)')
+          .order('release_date', { ascending: true }),
+        supabase
+          .from('noticias')
+          .select('id, title, slug, summary, cover_image, source_name, category')
+          .order('published_at', { ascending: false })
+          .limit(3),
+      ]);
+
+      if (juegosData) setGames(juegosData);
+      if (noticiasData) setNoticiasRecientes(noticiasData);
       setLoading(false);
     }
     cargarDatos();
@@ -468,6 +477,47 @@ export default function Catalogo() {
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '25px' }}>
                 {mejoresOfertasDestacadas.map(renderTarjetaOferta)}
+              </div>
+            </div>
+          )}
+
+          {/* SECCIÓN 6: ÚLTIMAS NOTICIAS GAMING */}
+          {noticiasRecientes.length > 0 && (
+            <div style={{ marginTop: '55px', marginBottom: '20px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px', marginBottom: '25px' }}>
+                <h2 style={{ fontSize: '1.4rem', color: '#fff', textTransform: 'uppercase', borderBottom: '3px solid #a855f7', display: 'inline-block', paddingBottom: '5px', margin: 0, letterSpacing: '1px' }}>
+                  📰 Últimas Noticias Gaming
+                </h2>
+                <Link href="/noticias" style={{ color: '#a855f7', textDecoration: 'none', fontWeight: 'bold', fontSize: '0.95rem' }}>
+                  Ver todas las noticias →
+                </Link>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '25px' }}>
+                {noticiasRecientes.map((noticia) => (
+                  <Link href={`/noticias/${noticia.slug}`} key={noticia.id} style={{ textDecoration: 'none' }}>
+                    <div style={{ backgroundColor: '#0b0d17', borderRadius: '12px', overflow: 'hidden', border: '1px solid #1f293d', display: 'flex', flexDirection: 'column', height: '100%' }}>
+                      <img
+                        src={noticia.cover_image || FALLBACK_IMG}
+                        alt={noticia.title}
+                        onError={(e) => {
+                          e.currentTarget.src = FALLBACK_IMG;
+                        }}
+                        style={{ width: '100%', height: '175px', objectFit: 'cover' }}
+                      />
+                      <div style={{ padding: '18px', display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
+                        <span style={{ color: '#2dd4bf', fontSize: '0.78rem', fontWeight: 'bold', marginBottom: '6px' }}>
+                          {noticia.category} • {noticia.source_name}
+                        </span>
+                        <h3 style={{ margin: '0 0 10px 0', color: '#fff', fontSize: '1.05rem', lineHeight: '1.35' }}>
+                          {noticia.title}
+                        </h3>
+                        <p style={{ color: '#94a3b8', fontSize: '0.88rem', margin: 0, lineHeight: '1.5' }}>
+                          {noticia.summary}
+                        </p>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
               </div>
             </div>
           )}
