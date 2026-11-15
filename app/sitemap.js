@@ -9,7 +9,10 @@ const supabase = createClient(
 export default async function sitemap() {
   const baseUrl = 'https://radarjuegos.lat';
 
-  const { data: games } = await supabase.from('games').select('slug');
+  const [{ data: games }, { data: noticias }] = await Promise.all([
+    supabase.from('games').select('slug'),
+    supabase.from('noticias').select('slug'),
+  ]);
 
   const paginasJuegos = (games || []).map((game) => ({
     url: `${baseUrl}/juego/${game.slug}`,
@@ -18,8 +21,16 @@ export default async function sitemap() {
     priority: 0.8,
   }));
 
+  const paginasNoticias = (noticias || []).map((noticia) => ({
+    url: `${baseUrl}/noticias/${noticia.slug}`,
+    lastModified: new Date(),
+    changeFrequency: 'daily',
+    priority: 0.85,
+  }));
+
   const paginasFijas = [
     { url: baseUrl, lastModified: new Date(), changeFrequency: 'daily', priority: 1.0 },
+    { url: `${baseUrl}/noticias`, lastModified: new Date(), changeFrequency: 'hourly', priority: 0.95 },
     { url: `${baseUrl}/proximos`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.9 },
     { url: `${baseUrl}/ofertas`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.9 },
     { url: `${baseUrl}/gratuitos`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.9 },
@@ -29,5 +40,5 @@ export default async function sitemap() {
     { url: `${baseUrl}/contacto`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.4 },
   ];
 
-  return [...paginasFijas, ...paginasJuegos];
+  return [...paginasFijas, ...paginasNoticias, ...paginasJuegos];
 }
