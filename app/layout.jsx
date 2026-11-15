@@ -1,4 +1,4 @@
-'use client'; 
+'use client';
 import { useState, useEffect } from 'react';
 
 export default function RootLayout({ children }) {
@@ -16,6 +16,13 @@ export default function RootLayout({ children }) {
 
   return (
     <html lang="es">
+      <head>
+        <script
+          async
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6055882420759450"
+          crossOrigin="anonymous"
+        ></script>
+      </head>
       <body style={{ backgroundColor: '#0f111a', margin: 0, fontFamily: 'system-ui, -apple-system, sans-serif', display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
         
         {/* BANNER GAMER PROFESIONAL */}
@@ -27,6 +34,8 @@ export default function RootLayout({ children }) {
           display: 'flex', 
           justifyContent: 'space-between', 
           alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '15px',
           position: 'sticky', 
           top: 0, 
           zIndex: 1000 
@@ -43,11 +52,12 @@ export default function RootLayout({ children }) {
             </h1>
           </div>
 
-          {/* MENÚ DE NAVEGACIÓN (Actualizado a las nuevas páginas) */}
-          <nav style={{ display: 'flex', gap: '35px' }}>
-            <a href="/" style={{ color: '#e2e8f0', textDecoration: 'none', fontWeight: 'bold', fontSize: '1.1rem', textTransform: 'uppercase', letterSpacing: '1px' }}>Inicio</a>
-            <a href="/proximos" style={{ color: '#e2e8f0', textDecoration: 'none', fontWeight: 'bold', fontSize: '1.1rem', textTransform: 'uppercase', letterSpacing: '1px' }}>Próximos</a>
-            <a href="/ofertas" style={{ color: '#e2e8f0', textDecoration: 'none', fontWeight: 'bold', fontSize: '1.1rem', textTransform: 'uppercase', letterSpacing: '1px' }}>Ofertas</a>
+          {/* MENÚ DE NAVEGACIÓN */}
+          <nav style={{ display: 'flex', gap: '28px', flexWrap: 'wrap' }}>
+            <a href="/" style={{ color: '#e2e8f0', textDecoration: 'none', fontWeight: 'bold', fontSize: '1.05rem', textTransform: 'uppercase', letterSpacing: '1px' }}>Inicio</a>
+            <a href="/proximos" style={{ color: '#e2e8f0', textDecoration: 'none', fontWeight: 'bold', fontSize: '1.05rem', textTransform: 'uppercase', letterSpacing: '1px' }}>Próximos</a>
+            <a href="/ofertas" style={{ color: '#e2e8f0', textDecoration: 'none', fontWeight: 'bold', fontSize: '1.05rem', textTransform: 'uppercase', letterSpacing: '1px' }}>Ofertas</a>
+            <a href="/gratuitos" style={{ color: '#10b981', textDecoration: 'none', fontWeight: 'bold', fontSize: '1.05rem', textTransform: 'uppercase', letterSpacing: '1px' }}>Gratuitos</a>
           </nav>
         </header>
 
@@ -62,12 +72,13 @@ export default function RootLayout({ children }) {
             <div>
               <h2 style={{ margin: '0 0 10px 0', fontSize: '1.5rem', color: '#fff', fontStyle: 'italic' }}>RADAR<span style={{ color: '#a855f7' }}>JUEGOS</span></h2>
               <p style={{ color: '#94a3b8', margin: 0, fontSize: '0.9rem', maxWidth: '400px' }}>
-                El portal definitivo para descubrir próximos lanzamientos y comparar precios.
+                El portal definitivo para descubrir próximos lanzamientos, juegos gratis y comparar precios.
               </p>
             </div>
             <div style={{ display: 'flex', gap: '20px' }}>
               <a href="/privacidad" style={{ color: '#94a3b8', textDecoration: 'none', fontSize: '0.9rem' }}>Privacidad</a>
               <a href="/terminos" style={{ color: '#94a3b8', textDecoration: 'none', fontSize: '0.9rem' }}>Términos</a>
+              <a href="/contacto" style={{ color: '#94a3b8', textDecoration: 'none', fontSize: '0.9rem' }}>Contacto</a>
             </div>
           </div>
         </footer>
