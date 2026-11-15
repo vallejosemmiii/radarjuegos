@@ -165,6 +165,12 @@ export default function Ofertas() {
           ))}
         </div>
       )}
+      <section style={{ marginTop: '60px', backgroundColor: '#0b0d17', padding: '28px', borderRadius: '12px', border: '1px solid #1f293d' }}>
+        <h2 style={{ color: '#fff', fontSize: '1.3rem', marginTop: 0 }}>Sobre el comparador de precios de RadarJuegos</h2>
+        <p style={{ color: '#94a3b8', lineHeight: '1.7', marginBottom: 0 }}>
+          Todos los precios mostrados en esta sección corresponden a distribuidores digitales autorizados y se expresan en dólares estadounidenses (USD). Nuestro sistema actualiza los descuentos cada hora para detectar rebajas históricas en Steam, GOG, Humble Store, GreenManGaming y Fanatical.
+        </p>
+      </section>
     </div>
   );
 }
