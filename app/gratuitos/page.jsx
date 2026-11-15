@@ -19,6 +19,7 @@ const colorTienda = (tienda) => {
   if (t.includes('gog')) return '#581c87';
   if (t.includes('prime')) return '#0369a1';
   if (t.includes('ubisoft')) return '#1d4ed8';
+  if (t.includes('free-to-play')) return '#6d28d9';
   return '#047857';
 };
 
@@ -33,9 +34,10 @@ export default function Gratuitos() {
       const { data } = await supabase.from('games').select('*, game_prices(*)');
       if (data) {
         const gratis = data
-          .filter((game) =>
-            Array.isArray(game.game_prices) &&
-            game.game_prices.some((p) => Number(p.price) === 0)
+          .filter(
+            (game) =>
+              Array.isArray(game.game_prices) &&
+              game.game_prices.some((p) => Number(p.price) === 0)
           )
           .map((game) => {
             const ofertasGratis = game.game_prices.filter((p) => Number(p.price) === 0);
@@ -53,7 +55,7 @@ export default function Gratuitos() {
     cargarGratuitos();
   }, []);
 
-  const tiendasDisponibles = ['Todas', 'Epic Games', 'Steam', 'GOG', 'Prime Gaming'];
+  const tiendasDisponibles = ['Todas', 'Epic Games', 'Steam', 'GOG', 'Prime Gaming', 'Free-to-Play'];
 
   const filtrados = games.filter((game) => {
     const coincideNombre = game.title.toLowerCase().includes(busqueda.toLowerCase());
@@ -66,15 +68,13 @@ export default function Gratuitos() {
 
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '40px 20px', color: '#e2e8f0' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px', marginBottom: '25px' }}>
-        <div>
-          <h1 style={{ fontSize: '2.2rem', color: '#fff', borderBottom: '3px solid #10b981', display: 'inline-block', paddingBottom: '8px', margin: '0 0 10px 0' }}>
-            🎁 Juegos Gratuitos Activos ({filtrados.length})
-          </h1>
-          <p style={{ color: '#94a3b8', margin: 0, fontSize: '1rem' }}>
-            Reclama juegos completos gratis por tiempo limitado en Epic Games, Steam, GOG, Prime Gaming y más.
-          </p>
-        </div>
+      <div style={{ marginBottom: '25px' }}>
+        <h1 style={{ fontSize: '2.2rem', color: '#fff', borderBottom: '3px solid #10b981', display: 'inline-block', paddingBottom: '8px', margin: '0 0 10px 0' }}>
+          🎁 Juegos Gratuitos y Free-to-Play ({filtrados.length})
+        </h1>
+        <p style={{ color: '#94a3b8', margin: 0, fontSize: '1rem' }}>
+          Reclama juegos gratis por tiempo limitado en Epic Games, Steam, GOG y Prime Gaming, o descarga títulos Free-to-Play completos.
+        </p>
       </div>
 
       {/* FILTROS POR TIENDA */}
@@ -101,7 +101,7 @@ export default function Gratuitos() {
 
       <input
         type="text"
-        placeholder="🔍 Buscar juego gratuito..."
+        placeholder="🔍 Buscar juego gratuito (Ej: Genshin Impact, Aniimo, Epic)..."
         value={busqueda}
         onChange={(e) => setBusqueda(e.target.value)}
         style={{
@@ -234,6 +234,14 @@ export default function Gratuitos() {
           ))}
         </div>
       )}
+
+      {/* BLOQUE INFORMATIVO SEO */}
+      <section style={{ marginTop: '60px', backgroundColor: '#0b0d17', padding: '28px', borderRadius: '12px', border: '1px solid #1f293d' }}>
+        <h2 style={{ color: '#fff', fontSize: '1.3rem', marginTop: 0 }}>¿Cómo reclamar los juegos gratuitos?</h2>
+        <p style={{ color: '#94a3b8', lineHeight: '1.7', marginBottom: 0 }}>
+          Los juegos promocionales de <strong>Epic Games Store</strong> se renuevan cada jueves y una vez reclamados quedan en tu biblioteca para siempre. Por su parte, las promociones relámpago de <strong>Steam</strong> y <strong>GOG</strong> suelen durar entre 24 y 72 horas, mientras que los títulos etiquetados como <strong>Free-to-Play</strong> pueden descargarse y jugarse gratuitamente en cualquier momento desde sus plataformas oficiales.
+        </p>
+      </section>
     </div>
   );
 }
